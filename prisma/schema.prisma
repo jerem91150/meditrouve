@@ -1,0 +1,395 @@
+// AlerteMedicaments - Schema Prisma
+// Suivi des ruptures de medicaments + Rappels de prise
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// PLANS & SUBSCRIPTIONS
+// ============================================
+
+enum SubscriptionPlan {
+  FREE
+  PREMIUM
+  FAMILLE
+}
+
+// ============================================
+// USERS & PROFILES
+// ============================================
+
+model User {
+  id               String           @id @default(cuid())
+  email            String           @unique
+  emailVerified    DateTime?
+  password         String?
+  name             String?
+  phone            String?
+  plan             SubscriptionPlan @default(FREE)
+  stripeCustomerId String?
+  notifyEmail      Boolean          @default(true)
+  notifyPush       Boolean          @default(true)
+  notifySMS        Boolean          @default(false)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  profiles         Profile[]
+  alerts           Alert[]
+  searches         SearchHistory[]
+  ordonnances      Ordonnance[]
+  pharmacyReports  PharmacyReport[]
+  familyInvites    FamilyInvite[]   @relation("InvitedBy")
+  receivedInvites  FamilyInvite[]   @relation("InvitedUser")
+}
+
+// Profile pour mode famille/aidant (self, parent, enfant, etc.)
+model Profile {
+  id           String   @id @default(cuid())
+  userId       String
+  name         String
+  relation     String   @default("self") // self, parent, child, spouse, other
+  isPrimary    Boolean  @default(false)
+  birthDate    DateTime?
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  medications  UserMedication[]
+  reminders    Reminder[]
+  ordonnances  Ordonnance[]
+
+  @@index([userId])
+}
+
+// Lien entre un profil et les médicaments suivis
+model UserMedication {
+  id               String    @id @default(cuid())
+  profileId        String
+  medicationId     String
+  customName       String?   // Nom personnalisé si différent
+  dosage           String?   // Ex: "1 comprimé", "10mg"
+  frequency        String?   // Ex: "2x/jour", "matin et soir"
+  reminderEnabled  Boolean   @default(true)
+  reminderTimes    String[]  // Ex: ["08:00", "20:00"]
+  stockQuantity    Int?      // Nombre restant
+  stockAlertAt     Int?      // Alerte quand stock < X
+  startDate        DateTime?
+  endDate          DateTime?
+  notes            String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  profile          Profile    @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  medication       Medication @relation(fields: [medicationId], references: [id], onDelete: Cascade)
+  reminders        Reminder[]
+
+  @@unique([profileId, medicationId])
+  @@index([profileId])
+  @@index([medicationId])
+}
+
+enum MedicationStatus {
+  AVAILABLE
+  TENSION
+  RUPTURE
+  UNKNOWN
+}
+
+model Medication {
+  id               String           @id @default(cuid())
+  cisCode          String           @unique
+  cip13            String?          @unique // Code CIP13 (code-barres)
+  name             String
+  laboratory       String?
+  activeIngredient String?          // DCI
+  dosage           String?
+  form             String?          // Forme galénique
+  isMITM           Boolean          @default(false) // Médicament d'Intérêt Thérapeutique Majeur
+  status           MedicationStatus @default(UNKNOWN)
+  lastChecked      DateTime         @default(now())
+  expectedReturn   DateTime?        // Date retour prévue si en rupture
+  answerUrl        String?
+  alternatives     String[]         // CIS codes des alternatives
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  alerts           Alert[]
+  statusHistory    StatusHistory[]
+  userMedications  UserMedication[]
+  pharmacyReports  PharmacyReport[]
+
+  @@index([name])
+  @@index([status])
+  @@index([activeIngredient])
+  @@index([cip13])
+}
+
+model StatusHistory {
+  id            String           @id @default(cuid())
+  medicationId  String
+  status        MedicationStatus
+  source        String           @default("ANSM")
+  details       String?
+  createdAt     DateTime         @default(now())
+
+  medication    Medication       @relation(fields: [medicationId], references: [id], onDelete: Cascade)
+
+  @@index([medicationId])
+  @@index([createdAt])
+}
+
+enum AlertType {
+  RUPTURE
+  TENSION
+  AVAILABLE
+  PREDICTION
+  ANY_CHANGE
+}
+
+model Alert {
+  id            String    @id @default(cuid())
+  userId        String
+  medicationId  String
+  type          AlertType @default(AVAILABLE)
+  isActive      Boolean   @default(true)
+  lastNotified  DateTime?
+  createdAt     DateTime  @default(now())
+
+  user          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  medication    Medication @relation(fields: [medicationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, medicationId])
+  @@index([userId])
+  @@index([medicationId])
+  @@index([isActive])
+}
+
+model SearchHistory {
+  id        String   @id @default(cuid())
+  userId    String?
+  query     String
+  results   Int      @default(0)
+  createdAt DateTime @default(now())
+
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([query])
+  @@index([createdAt])
+}
+
+model SyncLog {
+  id              String   @id @default(cuid())
+  startedAt       DateTime @default(now())
+  completedAt     DateTime?
+  medicationsUpdated Int    @default(0)
+  newMedications  Int      @default(0)
+  errors          String[]
+  success         Boolean  @default(false)
+}
+
+// ============================================
+// RAPPELS DE PRISE
+// ============================================
+
+enum ReminderStatus {
+  PENDING
+  SENT
+  TAKEN
+  SKIPPED
+  POSTPONED
+}
+
+model Reminder {
+  id               String         @id @default(cuid())
+  profileId        String
+  userMedicationId String
+  scheduledTime    DateTime
+  status           ReminderStatus @default(PENDING)
+  takenAt          DateTime?
+  postponedTo      DateTime?
+  notes            String?
+  createdAt        DateTime       @default(now())
+
+  profile          Profile        @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  userMedication   UserMedication @relation(fields: [userMedicationId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+  @@index([userMedicationId])
+  @@index([scheduledTime])
+  @@index([status])
+}
+
+// ============================================
+// OCR ORDONNANCE
+// ============================================
+
+enum OrdonnanceStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+model Ordonnance {
+  id                  String           @id @default(cuid())
+  userId              String
+  profileId           String?
+  imageUrl            String
+  status              OrdonnanceStatus @default(PENDING)
+  ocrResult           Json?            // Résultat brut de l'OCR
+  extractedMedications Json?           // Liste des médicaments extraits
+  doctorName          String?
+  prescriptionDate    DateTime?
+  processedAt         DateTime?
+  errorMessage        String?
+  createdAt           DateTime         @default(now())
+
+  user                User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  profile             Profile?         @relation(fields: [profileId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([profileId])
+  @@index([status])
+}
+
+// ============================================
+// PHARMACIES & GÉOLOCALISATION
+// ============================================
+
+model Pharmacy {
+  id           String   @id @default(cuid())
+  name         String
+  address      String
+  city         String
+  postalCode   String
+  latitude     Float?
+  longitude    Float?
+  phone        String?
+  isOnDuty     Boolean  @default(false) // Pharmacie de garde
+  openingHours Json?    // Horaires d'ouverture
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  reports      PharmacyReport[]
+
+  @@index([city])
+  @@index([postalCode])
+  @@index([isOnDuty])
+}
+
+enum ReportStatus {
+  AVAILABLE
+  UNAVAILABLE
+  LIMITED
+}
+
+// Signalement communautaire de disponibilité
+model PharmacyReport {
+  id           String       @id @default(cuid())
+  pharmacyId   String
+  medicationId String
+  userId       String
+  status       ReportStatus
+  quantity     Int?         // Quantité disponible si connue
+  price        Float?       // Prix si connu
+  verifiedAt   DateTime?    // Vérifié par d'autres utilisateurs
+  verifiedBy   Int          @default(0) // Nombre de vérifications
+  expiresAt    DateTime     // Expiration du signalement (24h)
+  createdAt    DateTime     @default(now())
+
+  pharmacy     Pharmacy     @relation(fields: [pharmacyId], references: [id], onDelete: Cascade)
+  medication   Medication   @relation(fields: [medicationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([pharmacyId])
+  @@index([medicationId])
+  @@index([createdAt])
+}
+
+// ============================================
+// MODE FAMILLE - INVITATIONS
+// ============================================
+
+enum InviteStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  EXPIRED
+}
+
+model FamilyInvite {
+  id            String       @id @default(cuid())
+  invitedById   String
+  invitedEmail  String
+  invitedUserId String?      // Rempli quand l'invité s'inscrit
+  profileId     String?      // Profil à partager
+  role          String       @default("viewer") // viewer, editor
+  status        InviteStatus @default(PENDING)
+  token         String       @unique
+  expiresAt     DateTime
+  createdAt     DateTime     @default(now())
+
+  invitedBy     User         @relation("InvitedBy", fields: [invitedById], references: [id], onDelete: Cascade)
+  invitedUser   User?        @relation("InvitedUser", fields: [invitedUserId], references: [id], onDelete: SetNull)
+
+  @@index([invitedEmail])
+  @@index([token])
+  @@index([status])
+}
+
+// ============================================
+// NOTIFICATIONS
+// ============================================
+
+enum NotificationType {
+  RUPTURE_ALERT
+  TENSION_ALERT
+  AVAILABLE_ALERT
+  REMINDER
+  STOCK_LOW
+  PREDICTION
+  FAMILY_INVITE
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  message   String
+  data      Json?            // Données supplémentaires (medicationId, etc.)
+  read      Boolean          @default(false)
+  sentEmail Boolean          @default(false)
+  sentPush  Boolean          @default(false)
+  sentSMS   Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  @@index([userId])
+  @@index([read])
+  @@index([createdAt])
+}
+
+// ============================================
+// PRÉDICTIONS ML
+// ============================================
+
+model Prediction {
+  id           String   @id @default(cuid())
+  medicationId String
+  predictedStatus MedicationStatus
+  probability  Float    // Score de confiance (0-1)
+  predictedDate DateTime // Date prévue du changement
+  factors      Json?    // Facteurs de la prédiction
+  wasCorrect   Boolean? // Validation a posteriori
+  createdAt    DateTime @default(now())
+
+  @@index([medicationId])
+  @@index([predictedDate])
+}

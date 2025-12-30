@@ -1,0 +1,338 @@
+@import "tailwindcss";
+
+/* ============================================
+   ALERTEMEDICAMENTS - MEDICAL DESIGN SYSTEM
+   Professional, clean, and trustworthy
+   ============================================ */
+
+:root {
+  /* Primary palette - Medical Teal/Blue */
+  --primary: 190 80% 42%;
+  --primary-light: 190 85% 52%;
+  --primary-dark: 190 75% 32%;
+  --primary-foreground: 0 0% 100%;
+
+  /* Accent - Coral for alerts */
+  --accent: 12 90% 60%;
+  --accent-light: 12 95% 70%;
+
+  /* Status colors */
+  --rupture: 0 85% 55%;
+  --tension: 35 95% 50%;
+  --available: 150 70% 45%;
+
+  /* Neutrals */
+  --background: 200 20% 98%;
+  --foreground: 200 15% 15%;
+  --muted: 200 15% 95%;
+  --muted-foreground: 200 10% 45%;
+
+  /* Cards & borders */
+  --card: 0 0% 100%;
+  --card-foreground: 200 15% 15%;
+  --border: 200 20% 90%;
+  --input: 200 20% 90%;
+  --ring: 190 80% 42%;
+
+  /* Radius */
+  --radius: 1rem;
+}
+
+/* ============================================
+   BASE STYLES
+   ============================================ */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: linear-gradient(180deg, hsl(200 30% 98%) 0%, hsl(0 0% 100%) 100%);
+  color: hsl(var(--foreground));
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ============================================
+   ANIMATIONS
+   ============================================ */
+
+@keyframes pulse-ring {
+  0% { transform: scale(0.95); opacity: 1; }
+  50% { transform: scale(1.05); opacity: 0.8; }
+  100% { transform: scale(0.95); opacity: 1; }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-in-left {
+  from { opacity: 0; transform: translateX(-20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes pulse-dot {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.5); opacity: 0.5; }
+}
+
+@keyframes gradient-flow {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.5s ease-out forwards;
+}
+
+.animate-slide-in-left {
+  animation: slide-in-left 0.5s ease-out forwards;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.5s ease-out forwards;
+}
+
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+
+.animate-pulse-dot {
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: gradient-flow 6s ease infinite;
+}
+
+/* Stagger delays */
+.stagger-1 { animation-delay: 0.1s; }
+.stagger-2 { animation-delay: 0.2s; }
+.stagger-3 { animation-delay: 0.3s; }
+.stagger-4 { animation-delay: 0.4s; }
+
+/* ============================================
+   GLASS MORPHISM
+   ============================================ */
+
+.glass {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.glass-teal {
+  background: rgba(15, 118, 110, 0.05);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(15, 118, 110, 0.15);
+}
+
+/* ============================================
+   GRADIENTS
+   ============================================ */
+
+.gradient-primary {
+  background: linear-gradient(135deg, hsl(190 80% 42%) 0%, hsl(200 85% 45%) 100%);
+}
+
+.gradient-hero {
+  background: linear-gradient(135deg,
+    hsl(190 40% 97%) 0%,
+    hsl(200 50% 95%) 50%,
+    hsl(180 35% 97%) 100%
+  );
+}
+
+.gradient-mesh {
+  background:
+    radial-gradient(at 20% 30%, hsla(190, 70%, 60%, 0.2) 0px, transparent 50%),
+    radial-gradient(at 80% 20%, hsla(200, 70%, 55%, 0.15) 0px, transparent 50%),
+    radial-gradient(at 40% 80%, hsla(180, 60%, 50%, 0.15) 0px, transparent 50%),
+    radial-gradient(at 90% 70%, hsla(170, 60%, 55%, 0.1) 0px, transparent 50%);
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, hsl(190 80% 35%) 0%, hsl(200 85% 40%) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ============================================
+   STATUS BADGES
+   ============================================ */
+
+.status-rupture {
+  background: linear-gradient(135deg, hsl(0 85% 95%) 0%, hsl(0 80% 92%) 100%);
+  border: 1px solid hsl(0 70% 85%);
+  color: hsl(0 75% 40%);
+}
+
+.status-rupture-icon {
+  background: linear-gradient(135deg, hsl(0 75% 55%) 0%, hsl(0 80% 50%) 100%);
+}
+
+.status-tension {
+  background: linear-gradient(135deg, hsl(35 95% 95%) 0%, hsl(35 90% 90%) 100%);
+  border: 1px solid hsl(35 80% 80%);
+  color: hsl(35 85% 35%);
+}
+
+.status-tension-icon {
+  background: linear-gradient(135deg, hsl(35 90% 50%) 0%, hsl(40 95% 45%) 100%);
+}
+
+.status-available {
+  background: linear-gradient(135deg, hsl(150 70% 95%) 0%, hsl(150 65% 90%) 100%);
+  border: 1px solid hsl(150 55% 80%);
+  color: hsl(150 65% 30%);
+}
+
+.status-available-icon {
+  background: linear-gradient(135deg, hsl(150 65% 45%) 0%, hsl(160 70% 40%) 100%);
+}
+
+/* ============================================
+   CARDS
+   ============================================ */
+
+.card-medication {
+  background: white;
+  border-radius: var(--radius);
+  border: 1px solid hsl(200 20% 92%);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-medication:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 32px rgba(15, 118, 110, 0.12);
+  border-color: hsl(190 50% 80%);
+}
+
+.card-medication-rupture {
+  border-left: 4px solid hsl(0 75% 55%);
+}
+
+.card-medication-tension {
+  border-left: 4px solid hsl(35 90% 50%);
+}
+
+.card-medication-available {
+  border-left: 4px solid hsl(150 65% 45%);
+}
+
+/* ============================================
+   DECORATIVE ELEMENTS
+   ============================================ */
+
+.blob-teal {
+  position: absolute;
+  border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%;
+  background: linear-gradient(135deg, hsla(190, 70%, 55%, 0.3), hsla(200, 70%, 50%, 0.2));
+  filter: blur(40px);
+}
+
+.blob-coral {
+  position: absolute;
+  border-radius: 70% 30% 30% 70% / 60% 40% 60% 40%;
+  background: linear-gradient(135deg, hsla(12, 80%, 60%, 0.15), hsla(0, 70%, 55%, 0.1));
+  filter: blur(40px);
+}
+
+.pattern-dots {
+  background-image: radial-gradient(hsl(190 30% 85%) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* ============================================
+   SCROLLBAR
+   ============================================ */
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(200 20% 96%);
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, hsl(190 50% 70%), hsl(200 50% 65%));
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, hsl(190 60% 55%), hsl(200 60% 50%));
+}
+
+/* ============================================
+   SELECTION
+   ============================================ */
+
+::selection {
+  background: hsla(190, 80%, 42%, 0.2);
+  color: hsl(190, 80%, 25%);
+}
+
+/* ============================================
+   FOCUS STATES
+   ============================================ */
+
+:focus-visible {
+  outline: 2px solid hsl(190 80% 42%);
+  outline-offset: 2px;
+}
+
+/* ============================================
+   LOADING SKELETON
+   ============================================ */
+
+.skeleton {
+  background: linear-gradient(90deg,
+    hsl(200 20% 94%) 25%,
+    hsl(200 20% 90%) 50%,
+    hsl(200 20% 94%) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--radius);
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
