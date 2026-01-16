@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import prisma from "@/lib/prisma";
-import { stripe, getActiveSubscription } from "@/lib/stripe";
+import { stripe, isStripeConfigured, getActiveSubscription } from "@/lib/stripe";
 import { logAuditEvent } from "@/lib/audit-log";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
@@ -87,7 +87,7 @@ export async function DELETE(request: NextRequest) {
     console.log("Account deletion requested:", deletionLog);
 
     // Annuler l'abonnement Stripe si existant
-    if (user.stripeCustomerId) {
+    if (user.stripeCustomerId && isStripeConfigured && stripe) {
       try {
         const subscription = await getActiveSubscription(user.stripeCustomerId);
         if (subscription) {
