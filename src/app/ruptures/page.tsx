@@ -10,6 +10,7 @@ import {
   Building,
 } from "lucide-react";
 import prisma from "@/lib/prisma";
+import { FAQSchema, BreadcrumbSchema } from "@/components/StructuredData";
 
 export const metadata: Metadata = {
   title: "Medicaments en rupture de stock en France - Liste complete | MediTrouve",
@@ -58,8 +59,36 @@ export default async function RupturesPage() {
 
   const letters = Object.keys(groupedByLetter).sort();
 
+  const faqItems = [
+    {
+      question: "Qu'est-ce qu'une rupture de stock de medicament ?",
+      answer: "Une rupture de stock survient lorsqu'un medicament n'est plus disponible dans les pharmacies, meme temporairement. Elle peut etre causee par des problemes de production, de distribution ou une demande exceptionnelle.",
+    },
+    {
+      question: "Quelle est la difference entre rupture et tension d'approvisionnement ?",
+      answer: "Une rupture signifie que le medicament est totalement indisponible au niveau national. Une tension signifie que le medicament est difficile a trouver mais encore disponible dans certaines pharmacies.",
+    },
+    {
+      question: "Que faire si mon medicament est en rupture de stock ?",
+      answer: "Consultez votre medecin pour une alternative, utilisez MediTrouve pour localiser les pharmacies avec stock, creez une alerte pour etre notifie du retour du medicament. Ne modifiez jamais votre traitement sans avis medical.",
+    },
+    {
+      question: "D'ou proviennent les donnees de MediTrouve ?",
+      answer: "Les donnees proviennent de l'ANSM (Agence nationale de securite du medicament et des produits de sante) et sont mises a jour quotidiennement.",
+    },
+  ];
+
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Structured Data for SEO */}
+      <FAQSchema items={faqItems} />
+      <BreadcrumbSchema
+        items={[
+          { name: "Accueil", url: "https://www.meditrouve.fr" },
+          { name: "Ruptures de stock", url: "https://www.meditrouve.fr/ruptures" },
+        ]}
+      />
+
       {/* Header */}
       <header className="bg-white border-b border-gray-200">
         <div className="max-w-6xl mx-auto px-4 py-4">

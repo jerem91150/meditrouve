@@ -64,6 +64,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "hourly",
       priority: 0.6,
     },
+    // Blog
+    {
+      url: `${baseUrl}/blog`,
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/blog/comprendre-ruptures-medicaments-france`,
+      lastModified: new Date("2025-01-15"),
+      changeFrequency: "monthly",
+      priority: 0.75,
+    },
     // Legal
     {
       url: `${baseUrl}/cgu`,

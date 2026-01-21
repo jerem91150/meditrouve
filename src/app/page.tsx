@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Search, Bell, Pill, AlertTriangle, CheckCircle, Clock, ArrowRight, Shield, Zap, Users, Mail, ChevronRight, Activity, Heart, TrendingUp, Lock, Store } from "lucide-react";
 import PharmacyList from "@/components/PharmacyList";
 import AlternativesList from "@/components/AlternativesList";
+import { OrganizationSchema, WebSiteSchema } from "@/components/StructuredData";
 
 interface Medication {
   id: string;
@@ -155,6 +156,20 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-white overflow-hidden">
+      {/* Structured Data for SEO */}
+      <OrganizationSchema
+        name="MediTrouve"
+        url="https://www.meditrouve.fr"
+        description="Service gratuit de suivi des ruptures et tensions d'approvisionnement de medicaments en France. Donnees officielles ANSM."
+        sameAs={[]}
+      />
+      <WebSiteSchema
+        name="MediTrouve"
+        url="https://www.meditrouve.fr"
+        description="Trouvez vos medicaments en rupture de stock, localisez les pharmacies qui les ont et recevez des alertes de disponibilite."
+        searchUrl="https://www.meditrouve.fr/medications"
+      />
+
       {/* Navbar */}
       <nav className="fixed top-0 left-0 right-0 z-50 glass border-b border-white/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
