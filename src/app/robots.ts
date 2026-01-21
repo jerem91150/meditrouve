@@ -16,6 +16,6 @@ export default function robots(): MetadataRoute.Robots {
         ],
       },
     ],
-    sitemap: 'https://meditrouve.fr/sitemap.xml',
+    sitemap: 'https://www.meditrouve.fr/sitemap.xml',
   };
 }

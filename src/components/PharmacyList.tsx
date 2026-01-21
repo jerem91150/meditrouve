@@ -11,7 +11,12 @@ import {
   Store,
   ThumbsUp,
   Plus,
+  Locate,
+  Search,
 } from "lucide-react";
+import CitySearch from "./CitySearch";
+
+type LocationMode = "geolocation" | "city";
 
 interface Pharmacy {
   id: string;
@@ -53,23 +58,40 @@ export default function PharmacyList({
   const [selectedPharmacy, setSelectedPharmacy] = useState<Pharmacy | null>(
     null
   );
+  const [locationMode, setLocationMode] = useState<LocationMode>("geolocation");
+  const [cityLocation, setCityLocation] = useState<{
+    lat: number;
+    lng: number;
+    name: string;
+  } | null>(null);
+  const [geoError, setGeoError] = useState(false);
 
   // Récupérer la géolocalisation
   useEffect(() => {
-    if (navigator.geolocation) {
+    if (locationMode === "geolocation" && navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           setUserLocation({
             lat: position.coords.latitude,
             lng: position.coords.longitude,
           });
+          setGeoError(false);
         },
         (err) => {
           console.log("Geolocation not available:", err);
+          setGeoError(true);
         }
       );
     }
-  }, []);
+  }, [locationMode]);
+
+  // Déterminer les coordonnées actives selon le mode
+  const activeLocation =
+    locationMode === "city" && cityLocation
+      ? { lat: cityLocation.lat, lng: cityLocation.lng }
+      : locationMode === "geolocation" && userLocation
+        ? userLocation
+        : null;
 
   // Charger les pharmacies
   useEffect(() => {
@@ -77,8 +99,8 @@ export default function PharmacyList({
       setLoading(true);
       try {
         let url = `/api/pharmacies/nearby?medicationId=${medicationId}`;
-        if (userLocation) {
-          url += `&lat=${userLocation.lat}&lng=${userLocation.lng}&radius=20`;
+        if (activeLocation) {
+          url += `&lat=${activeLocation.lat}&lng=${activeLocation.lng}&radius=20`;
         }
 
         const response = await fetch(url);
@@ -95,7 +117,7 @@ export default function PharmacyList({
     }
 
     fetchPharmacies();
-  }, [medicationId, userLocation]);
+  }, [medicationId, activeLocation?.lat, activeLocation?.lng]);
 
   const handleReport = async (
     pharmacyId: string,
@@ -115,8 +137,8 @@ export default function PharmacyList({
       if (response.ok) {
         // Rafraîchir la liste
         const url = `/api/pharmacies/nearby?medicationId=${medicationId}${
-          userLocation
-            ? `&lat=${userLocation.lat}&lng=${userLocation.lng}&radius=20`
+          activeLocation
+            ? `&lat=${activeLocation.lat}&lng=${activeLocation.lng}&radius=20`
             : ""
         }`;
         const data = await fetch(url).then((r) => r.json());
@@ -143,8 +165,8 @@ export default function PharmacyList({
       });
       // Rafraîchir
       const url = `/api/pharmacies/nearby?medicationId=${medicationId}${
-        userLocation
-          ? `&lat=${userLocation.lat}&lng=${userLocation.lng}&radius=20`
+        activeLocation
+          ? `&lat=${activeLocation.lat}&lng=${activeLocation.lng}&radius=20`
           : ""
       }`;
       const data = await fetch(url).then((r) => r.json());
@@ -154,6 +176,14 @@ export default function PharmacyList({
     } catch (err) {
       console.error("Verify error:", err);
     }
+  };
+
+  const handleCitySelect = (city: { lat: number; lng: number; name: string }) => {
+    setCityLocation(city);
+  };
+
+  const handleCityClear = () => {
+    setCityLocation(null);
   };
 
   const openInMaps = (pharmacy: Pharmacy) => {
@@ -188,19 +218,74 @@ export default function PharmacyList({
             Pharmacies proches
           </h3>
         </div>
-        {userLocation && (
+        {activeLocation && (
           <span className="text-xs text-gray-500 flex items-center gap-1">
-            <Navigation className="w-3 h-3" />
-            Position activée
+            {locationMode === "geolocation" ? (
+              <>
+                <Navigation className="w-3 h-3" />
+                Position activée
+              </>
+            ) : (
+              <>
+                <MapPin className="w-3 h-3" />
+                {cityLocation?.name}
+              </>
+            )}
           </span>
         )}
       </div>
 
-      {!userLocation && (
+      {/* Toggle entre géolocalisation et recherche de ville */}
+      <div className="flex items-center gap-2 mb-4">
+        <button
+          onClick={() => setLocationMode("geolocation")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+            locationMode === "geolocation"
+              ? "bg-teal-100 text-teal-700 border border-teal-200"
+              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+          }`}
+        >
+          <Locate className="w-4 h-4" />
+          Ma position
+        </button>
+        <button
+          onClick={() => setLocationMode("city")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+            locationMode === "city"
+              ? "bg-teal-100 text-teal-700 border border-teal-200"
+              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+          }`}
+        >
+          <Search className="w-4 h-4" />
+          Rechercher une ville
+        </button>
+      </div>
+
+      {/* Recherche de ville si mode city */}
+      {locationMode === "city" && (
+        <div className="mb-4">
+          <CitySearch
+            onCitySelect={handleCitySelect}
+            onClear={handleCityClear}
+            placeholder="Entrez le nom d'une ville..."
+          />
+        </div>
+      )}
+
+      {/* Message si géolocalisation non disponible */}
+      {locationMode === "geolocation" && geoError && (
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4 text-sm text-amber-800">
           <p>
-            Activez la géolocalisation pour voir les pharmacies les plus proches
-            de vous.
+            La géolocalisation n&apos;est pas disponible. Utilisez la recherche de ville pour trouver des pharmacies.
+          </p>
+        </div>
+      )}
+
+      {/* Message si aucune position sélectionnée */}
+      {locationMode === "city" && !cityLocation && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 text-sm text-blue-800">
+          <p>
+            Recherchez une ville pour voir les pharmacies proches.
           </p>
         </div>
       )}

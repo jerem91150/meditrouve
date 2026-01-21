@@ -516,6 +516,26 @@ model PharmacyAccount {
 }
 
 // ============================================
+// CITY GEOCODING CACHE
+// ============================================
+
+model CityCache {
+  id          String   @id @default(cuid())
+  name        String
+  postalCode  String?
+  department  String?
+  region      String?
+  latitude    Float
+  longitude   Float
+  searchCount Int      @default(1)
+  lastUsed    DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  @@unique([name, postalCode])
+  @@index([name])
+}
+
+// ============================================
 // PUSH TOKENS (Mobile Notifications)
 // ============================================
 
