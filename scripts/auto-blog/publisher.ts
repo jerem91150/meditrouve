@@ -28,9 +28,9 @@ export async function publishArticle(
   const db = getPrisma();
   const shouldPublish = qualityCheck.approved && qualityCheck.overallScore >= minScore;
 
-  // Sélectionner un auteur approprié (favoriser médecins pour articles techniques)
-  const authorObj = getAuthorForArticle(article.category, article.category === 'Traitements' || article.category === 'Innovations');
-  const authorName = formatAuthor(authorObj, true); // Avec titre (ex: "Dr. Maëlle Dupont, Pharmacienne")
+  // Sélectionner un auteur aléatoire (prénom simple)
+  const authorObj = getAuthorForArticle(article.category);
+  const authorName = authorObj.name; // Juste le prénom (ex: "Maëlle")
 
   console.log(`📤 Publication article "${article.slug}" (score: ${qualityCheck.overallScore})...`);
   console.log(`✍️ Auteur : ${authorName}`);

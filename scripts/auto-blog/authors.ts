@@ -9,31 +9,31 @@ export interface Author {
   specialty?: string; // Spécialité médicale (optionnel)
 }
 
-// Pool d'auteurs avec leurs spécialités
+// Pool d'auteurs (prénoms simples)
 const AUTHORS: Author[] = [
   {
-    name: "Dr. Maëlle Dupont",
-    title: "Pharmacienne",
+    name: "Maëlle",
+    title: "Équipe MediTrouve",
     specialty: "Pharmacologie clinique"
   },
   {
-    name: "Ellie Martin",
-    title: "Rédactrice médicale",
+    name: "Ellie",
+    title: "Équipe MediTrouve",
     specialty: "Vulgarisation scientifique"
   },
   {
-    name: "Camille Bernard",
-    title: "Journaliste santé",
+    name: "Camille",
+    title: "Équipe MediTrouve",
     specialty: "Actualités médicales"
   },
   {
-    name: "Dr. Jules Moreau",
-    title: "Médecin généraliste",
+    name: "Jules",
+    title: "Équipe MediTrouve",
     specialty: "Médecine de premier recours"
   },
   {
-    name: "Jérémy Porteron",
-    title: "Chef de projet R&D",
+    name: "Jérémy",
+    title: "Équipe MediTrouve",
     specialty: "Innovation en santé"
   }
 ];
@@ -55,33 +55,8 @@ export function getAuthorForArticle(
   category: string,
   isProfessional: boolean = false
 ): Author {
-  // Si article professionnel, favoriser les auteurs avec "Dr."
-  if (isProfessional) {
-    const professionalAuthors = AUTHORS.filter(a => a.name.startsWith('Dr.'));
-    const randomIndex = Math.floor(Math.random() * professionalAuthors.length);
-    return professionalAuthors[randomIndex];
-  }
-
-  // Sinon, sélection en fonction de la catégorie
-  switch (category.toLowerCase()) {
-    case 'innovations':
-    case 'traitements':
-      // Favoriser les médecins/pharmaciens pour les sujets techniques
-      return AUTHORS.filter(a => a.name.startsWith('Dr.'))[
-        Math.floor(Math.random() * 2)
-      ];
-    
-    case 'actualités':
-    case 'ruptures':
-      // Favoriser les journalistes/rédacteurs pour l'actualité
-      return AUTHORS.filter(a => !a.name.startsWith('Dr.'))[
-        Math.floor(Math.random() * 3)
-      ];
-    
-    default:
-      // Aléatoire par défaut
-      return getRandomAuthor();
-  }
+  // Sélection aléatoire simple (tous les auteurs sont équivalents maintenant)
+  return getRandomAuthor();
 }
 
 /**
@@ -101,12 +76,12 @@ export function formatAuthor(author: Author, withTitle: boolean = false): string
  */
 export function getAuthorBio(author: Author): string {
   const bios: Record<string, string> = {
-    "Dr. Maëlle Dupont": "Pharmacienne clinicienne et spécialiste en pharmacologie. Collabore avec MediTrouve pour vulgariser l'information médicale.",
-    "Ellie Martin": "Rédactrice médicale passionnée par la communication en santé. Diplômée en biologie et journalisme scientifique.",
-    "Camille Bernard": "Journaliste santé depuis 8 ans, spécialisée dans les politiques de santé publique et l'accès aux médicaments.",
-    "Dr. Jules Moreau": "Médecin généraliste en exercice, contributeur régulier pour des articles de vulgarisation médicale.",
-    "Jérémy Porteron": "Ingénieur R&D et fondateur de MediTrouve. Passionné par l'innovation au service de la santé."
+    "Maëlle": "Membre de l'équipe MediTrouve, spécialisée en pharmacologie clinique.",
+    "Ellie": "Rédactrice médicale passionnée par la vulgarisation scientifique.",
+    "Camille": "Journaliste santé spécialisée dans l'actualité médicale.",
+    "Jules": "Contributeur MediTrouve, expert en médecine de premier recours.",
+    "Jérémy": "Fondateur de MediTrouve, passionné par l'innovation en santé."
   };
 
-  return bios[author.name] || `${author.title} chez MediTrouve.`;
+  return bios[author.name] || `Membre de l'équipe MediTrouve.`;
 }
