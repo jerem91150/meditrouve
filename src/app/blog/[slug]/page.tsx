@@ -4,6 +4,8 @@ import Link from 'next/link';
 import prisma from '@/lib/prisma';
 import BlogArticleContent from './BlogArticleContent';
 
+export const dynamic = 'force-dynamic';
+
 interface Props {
   params: Promise<{ slug: string }>;
 }

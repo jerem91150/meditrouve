@@ -2,6 +2,8 @@ import { Metadata } from 'next';
 import Link from 'next/link';
 import prisma from '@/lib/prisma';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: 'Blog Santé - Actualités médicaments',
   description: 'Articles sur les médicaments, ruptures de stock, alertes sanitaires. Double version : grand public et professionnels de santé.',
