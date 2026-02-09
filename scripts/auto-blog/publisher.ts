@@ -5,6 +5,7 @@
 
 import { PrismaClient } from '@prisma/client';
 import { GeneratedArticle, QualityCheck } from './types';
+import { getAuthorForArticle, formatAuthor } from './authors';
 
 let prisma: PrismaClient;
 
@@ -27,7 +28,12 @@ export async function publishArticle(
   const db = getPrisma();
   const shouldPublish = qualityCheck.approved && qualityCheck.overallScore >= minScore;
 
+  // Sélectionner un auteur approprié (favoriser médecins pour articles techniques)
+  const authorObj = getAuthorForArticle(article.category, article.category === 'Traitements' || article.category === 'Innovations');
+  const authorName = formatAuthor(authorObj, true); // Avec titre (ex: "Dr. Maëlle Dupont, Pharmacienne")
+
   console.log(`📤 Publication article "${article.slug}" (score: ${qualityCheck.overallScore})...`);
+  console.log(`✍️ Auteur : ${authorName}`);
 
   try {
     // Vérifier si le slug existe déjà
@@ -42,7 +48,7 @@ export async function publishArticle(
         data: {
           title: article.public.title,
           category: article.category,
-          author: article.author,
+          author: authorName,
           excerptPublic: article.public.excerpt,
           contentPublic: article.public.content,
           readTimePublic: article.public.readTime,
@@ -67,7 +73,7 @@ export async function publishArticle(
         slug: article.slug,
         title: article.public.title,
         category: article.category,
-        author: article.author,
+        author: authorName,
         excerptPublic: article.public.excerpt,
         contentPublic: article.public.content,
         readTimePublic: article.public.readTime,
