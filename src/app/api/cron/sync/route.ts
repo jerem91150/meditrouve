@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import prisma from "@/lib/prisma";
 
 // Cette route est appelée par un CRON job toutes les heures
 // Pour Vercel: ajouter dans vercel.json: { "crons": [{ "path": "/api/cron/sync", "schedule": "0 * * * *" }] }

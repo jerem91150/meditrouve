@@ -3,7 +3,9 @@ import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
-const JWT_SECRET = process.env.JWT_SECRET || "meditrouve-jwt-secret-2024";
+import { getJwtSecret } from "@/lib/jwt-secret";
+
+const JWT_SECRET = getJwtSecret();
 
 export async function POST(request: Request) {
   try {

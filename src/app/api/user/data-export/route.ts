@@ -5,7 +5,9 @@ import { guardFeature } from "@/lib/plan-guard";
 import { PlanId } from "@/lib/plans";
 import jwt from "jsonwebtoken";
 
-const JWT_SECRET = process.env.JWT_SECRET || "meditrouve-jwt-secret-2024";
+import { getJwtSecret } from "@/lib/jwt-secret";
+
+const JWT_SECRET = getJwtSecret();
 
 // Get user ID from session or JWT token
 async function getUserId(request: NextRequest): Promise<string | null> {

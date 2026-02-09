@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import jwt from "jsonwebtoken";
+import { getJwtSecret } from "@/lib/jwt-secret";
 
-const JWT_SECRET = process.env.JWT_SECRET || "meditrouve-jwt-secret-2024";
+const JWT_SECRET = getJwtSecret();
 
 function getUserIdFromToken(request: NextRequest): string | null {
   const authHeader = request.headers.get("Authorization");

@@ -3,9 +3,9 @@ import prisma from "@/lib/prisma";
 import { cookies } from "next/headers";
 import { jwtVerify } from "jose";
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || "pharmacien-secret-key-change-in-production"
-);
+import { getJwtSecretBytes } from "@/lib/jwt-secret";
+
+const JWT_SECRET = getJwtSecretBytes();
 
 async function getPharmacyAccount() {
   const cookieStore = await cookies();

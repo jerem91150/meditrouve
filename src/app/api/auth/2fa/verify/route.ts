@@ -5,7 +5,9 @@ import { verifyTwoFactor } from '@/lib/two-factor';
 import { logAuditEvent, getRequestInfo } from '@/lib/audit-log';
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'meditrouve-jwt-secret-2024';
+import { getJwtSecret } from "@/lib/jwt-secret";
+
+const JWT_SECRET = getJwtSecret();
 
 export async function POST(request: NextRequest) {
   try {

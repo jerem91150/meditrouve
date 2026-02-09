@@ -4,9 +4,9 @@ import bcrypt from "bcryptjs";
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || "pharmacien-secret-key-change-in-production"
-);
+import { getJwtSecretBytes } from "@/lib/jwt-secret";
+
+const JWT_SECRET = getJwtSecretBytes();
 
 // Inscription pharmacien
 export async function POST(request: NextRequest) {

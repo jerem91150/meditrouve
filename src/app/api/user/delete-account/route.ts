@@ -6,7 +6,9 @@ import { logAuditEvent } from "@/lib/audit-log";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 
-const JWT_SECRET = process.env.JWT_SECRET || "meditrouve-jwt-secret-2024";
+import { getJwtSecret } from "@/lib/jwt-secret";
+
+const JWT_SECRET = getJwtSecret();
 
 // Get user from session or JWT token
 async function getUser(request: NextRequest) {

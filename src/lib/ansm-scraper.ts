@@ -1,78 +1,91 @@
-import * as cheerio from "cheerio";
+import * as fs from "fs";
+import * as path from "path";
 import prisma from "./prisma";
 
-const ANSM_RUPTURES_URL = "https://ansm.sante.fr/disponibilites-des-produits-de-sante/medicaments";
-const ANSM_TENSIONS_URL = "https://ansm.sante.fr/disponibilites-des-produits-de-sante/medicaments/tensions-dapprovisionnement";
+// BDPM data directory (local open data files)
+const DATA_DIR = path.join(process.cwd(), "data");
 
-interface ScrapedMedication {
+interface BDPMMedication {
   cisCode: string;
   name: string;
+  form?: string;
+  route?: string;
+  status?: string;
   laboratory?: string;
-  status: "RUPTURE" | "TENSION" | "AVAILABLE";
-  details?: string;
 }
 
-export async function fetchANSMPage(url: string): Promise<string> {
-  const response = await fetch(url, {
-    headers: {
-      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-      "Accept": "text/html,application/xhtml+xml"
-    }
-  });
+interface ShortageInfo {
+  cisCode: string;
+  level: number;
+  statusText: string;
+  startDate: string;
+  endDate: string;
+  url?: string;
+}
 
-  if (!response.ok) {
-    throw new Error(`Failed to fetch ANSM: ${response.status}`);
+// Parse CIS_bdpm.txt - Main medications database
+function parseCISFile(content: string): Map<string, BDPMMedication> {
+  const medications = new Map<string, BDPMMedication>();
+  const lines = content.split("\n").filter((line) => line.trim());
+
+  for (const line of lines) {
+    const parts = line.split("\t");
+    if (parts.length < 2) continue;
+
+    const cisCode = parts[0].trim();
+    const name = parts[1]?.trim() || "";
+    const form = parts[2]?.trim() || undefined;
+    const route = parts[3]?.trim() || undefined;
+    const status = parts[4]?.trim() || undefined;
+    const laboratory = parts[10]?.trim() || undefined;
+
+    if (cisCode && name) {
+      medications.set(cisCode, { cisCode, name, form, route, status, laboratory });
+    }
   }
 
-  return response.text();
-}
-
-export async function parseRupturesPage(html: string): Promise<ScrapedMedication[]> {
-  const $ = cheerio.load(html);
-  const medications: ScrapedMedication[] = [];
-
-  // Parse the ANSM ruptures table
-  // Note: The actual selector depends on ANSM website structure
-  $(".medication-row, .rupture-item, tr[data-medication]").each((_, element) => {
-    const $el = $(element);
-    const name = $el.find(".medication-name, .name, td:first-child").text().trim();
-    const cisCode = $el.attr("data-cis") || $el.find("[data-cis]").attr("data-cis") || "";
-    const laboratory = $el.find(".laboratory, .labo, td:nth-child(2)").text().trim();
-
-    if (name && cisCode) {
-      medications.push({
-        cisCode,
-        name,
-        laboratory: laboratory || undefined,
-        status: "RUPTURE"
-      });
-    }
-  });
-
   return medications;
 }
 
-export async function parseTensionsPage(html: string): Promise<ScrapedMedication[]> {
-  const $ = cheerio.load(html);
-  const medications: ScrapedMedication[] = [];
+// Parse CIS_CIP_Dispo_Spec.txt - Shortages/tensions
+function parseShortagesFile(content: string): Map<string, ShortageInfo> {
+  const shortages = new Map<string, ShortageInfo>();
+  const lines = content.split("\n").filter((line) => line.trim());
 
-  $(".medication-row, .tension-item, tr[data-medication]").each((_, element) => {
-    const $el = $(element);
-    const name = $el.find(".medication-name, .name, td:first-child").text().trim();
-    const cisCode = $el.attr("data-cis") || $el.find("[data-cis]").attr("data-cis") || "";
-    const laboratory = $el.find(".laboratory, .labo, td:nth-child(2)").text().trim();
+  for (const line of lines) {
+    const parts = line.split("\t");
+    if (parts.length < 4) continue;
 
-    if (name && cisCode) {
-      medications.push({
-        cisCode,
-        name,
-        laboratory: laboratory || undefined,
-        status: "TENSION"
-      });
+    const cisCode = parts[0].trim();
+    const level = parseInt(parts[2]) || 0;
+    const statusText = parts[3].trim().toLowerCase();
+    const startDate = parts[4]?.trim() || "";
+    const endDate = parts[5]?.trim() || "";
+    const url = parts[7]?.trim() || undefined;
+
+    if (cisCode) {
+      shortages.set(cisCode, { cisCode, level, statusText, startDate, endDate, url });
     }
-  });
+  }
 
-  return medications;
+  return shortages;
+}
+
+// Read a local BDPM file with latin1 encoding
+function readBDPMFile(filename: string): string {
+  const filePath = path.join(DATA_DIR, filename);
+  if (!fs.existsSync(filePath)) {
+    throw new Error(`BDPM file not found: ${filePath}`);
+  }
+  return fs.readFileSync(filePath, "latin1");
+}
+
+// Determine medication status from shortage info
+function getStatus(info: ShortageInfo): "RUPTURE" | "TENSION" {
+  if (info.statusText.includes("rupture")) {
+    return "RUPTURE";
+  }
+  return "TENSION";
 }
 
 export async function syncMedications(): Promise<{
@@ -81,7 +94,7 @@ export async function syncMedications(): Promise<{
   errors: string[];
 }> {
   const log = await prisma.syncLog.create({
-    data: { startedAt: new Date() }
+    data: { startedAt: new Date() },
   });
 
   const errors: string[] = [];
@@ -89,83 +102,87 @@ export async function syncMedications(): Promise<{
   let created = 0;
 
   try {
-    // Fetch and parse ruptures
-    const rupturesHtml = await fetchANSMPage(ANSM_RUPTURES_URL);
-    const ruptures = await parseRupturesPage(rupturesHtml);
+    // Read local BDPM files
+    const cisContent = readBDPMFile("CIS_bdpm.txt");
+    const shortagesContent = readBDPMFile("CIS_CIP_Dispo_Spec.txt");
 
-    // Fetch and parse tensions
-    const tensionsHtml = await fetchANSMPage(ANSM_TENSIONS_URL);
-    const tensions = await parseTensionsPage(tensionsHtml);
+    const allMedications = parseCISFile(cisContent);
+    const shortages = parseShortagesFile(shortagesContent);
 
-    // Combine all medications
-    const allMedications = [...ruptures, ...tensions];
+    console.log(`[SYNC] Loaded ${allMedications.size} medications, ${shortages.size} shortages from local BDPM files`);
+
     const processedCodes = new Set<string>();
 
-    for (const med of allMedications) {
-      if (processedCodes.has(med.cisCode)) continue;
-      processedCodes.add(med.cisCode);
+    // Process shortages (ruptures + tensions)
+    for (const [cisCode, info] of shortages) {
+      if (processedCodes.has(cisCode)) continue;
+      processedCodes.add(cisCode);
+
+      const medInfo = allMedications.get(cisCode);
+      const name = medInfo?.name || `Médicament CIS ${cisCode}`;
+      const laboratory = medInfo?.laboratory;
+      const newStatus = getStatus(info);
 
       try {
         const existing = await prisma.medication.findUnique({
-          where: { cisCode: med.cisCode }
+          where: { cisCode },
         });
 
         if (existing) {
-          // Check if status changed
-          if (existing.status !== med.status) {
+          if (existing.status !== newStatus) {
             await prisma.statusHistory.create({
               data: {
                 medicationId: existing.id,
-                status: med.status,
-                source: "ANSM",
-                details: med.details
-              }
+                status: newStatus,
+                source: "BDPM",
+                details: info.statusText,
+              },
             });
           }
 
           await prisma.medication.update({
-            where: { cisCode: med.cisCode },
+            where: { cisCode },
             data: {
-              name: med.name,
-              laboratory: med.laboratory,
-              status: med.status,
-              lastChecked: new Date()
-            }
+              name,
+              laboratory,
+              status: newStatus,
+              lastChecked: new Date(),
+            },
           });
           updated++;
         } else {
           const newMed = await prisma.medication.create({
             data: {
-              cisCode: med.cisCode,
-              name: med.name,
-              laboratory: med.laboratory,
-              status: med.status,
-              lastChecked: new Date()
-            }
+              cisCode,
+              name,
+              laboratory,
+              status: newStatus,
+              lastChecked: new Date(),
+            },
           });
 
           await prisma.statusHistory.create({
             data: {
               medicationId: newMed.id,
-              status: med.status,
-              source: "ANSM"
-            }
+              status: newStatus,
+              source: "BDPM",
+            },
           });
           created++;
         }
       } catch (err) {
-        errors.push(`Error processing ${med.cisCode}: ${err}`);
+        errors.push(`Error processing ${cisCode}: ${err}`);
       }
     }
 
-    // Mark medications not in the lists as AVAILABLE
-    const ruptureAndTensionCodes = allMedications.map(m => m.cisCode);
+    // Mark medications not in shortage lists as AVAILABLE
+    const shortageCodes = Array.from(shortages.keys());
     await prisma.medication.updateMany({
       where: {
-        cisCode: { notIn: ruptureAndTensionCodes },
-        status: { not: "AVAILABLE" }
+        cisCode: { notIn: shortageCodes },
+        status: { not: "AVAILABLE" },
       },
-      data: { status: "AVAILABLE", lastChecked: new Date() }
+      data: { status: "AVAILABLE", lastChecked: new Date() },
     });
 
     await prisma.syncLog.update({
@@ -175,10 +192,9 @@ export async function syncMedications(): Promise<{
         medicationsUpdated: updated,
         newMedications: created,
         errors,
-        success: true
-      }
+        success: true,
+      },
     });
-
   } catch (err) {
     errors.push(`Sync failed: ${err}`);
     await prisma.syncLog.update({
@@ -186,8 +202,8 @@ export async function syncMedications(): Promise<{
       data: {
         completedAt: new Date(),
         errors,
-        success: false
-      }
+        success: false,
+      },
     });
   }
 
@@ -212,38 +228,36 @@ const DEMO_MEDICATIONS = [
 ];
 
 export async function searchMedications(query: string, userId?: string) {
-  // Try database first, fallback to demo data if unavailable
   try {
     const medications = await prisma.medication.findMany({
       where: {
         OR: [
           { name: { contains: query, mode: "insensitive" } },
           { activeIngredient: { contains: query, mode: "insensitive" } },
-          { cisCode: { contains: query } }
-        ]
+          { cisCode: { contains: query } },
+        ],
       },
-      orderBy: [
-        { status: "asc" },
-        { name: "asc" }
-      ],
-      take: 50
+      orderBy: [{ status: "asc" }, { name: "asc" }],
+      take: 50,
     });
 
     if (userId) {
-      await prisma.searchHistory.create({
-        data: { userId, query, results: medications.length }
-      }).catch(() => {});
+      await prisma.searchHistory
+        .create({
+          data: { userId, query, results: medications.length },
+        })
+        .catch(() => {});
     }
 
     return medications;
   } catch (error) {
-    // Database not available, use demo data
     console.log("Using demo data (database unavailable)");
     const lowerQuery = query.toLowerCase();
-    return DEMO_MEDICATIONS.filter(med =>
-      med.name.toLowerCase().includes(lowerQuery) ||
-      med.activeIngredient.toLowerCase().includes(lowerQuery) ||
-      med.cisCode.includes(query)
+    return DEMO_MEDICATIONS.filter(
+      (med) =>
+        med.name.toLowerCase().includes(lowerQuery) ||
+        med.activeIngredient.toLowerCase().includes(lowerQuery) ||
+        med.cisCode.includes(query)
     );
   }
 }

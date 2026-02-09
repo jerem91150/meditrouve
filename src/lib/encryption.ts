@@ -1,7 +1,8 @@
 import CryptoJS from "crypto-js";
+import { getEncryptionKey } from "./jwt-secret";
 
-// Get encryption key from environment
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || process.env.JWT_SECRET || "default-encryption-key-change-me";
+// Get encryption key from environment - no fallback allowed
+const ENCRYPTION_KEY = getEncryptionKey();
 
 // AES-256 encryption for sensitive data at rest
 export function encryptData(data: string): string {
