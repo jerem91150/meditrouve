@@ -536,6 +536,52 @@ model CityCache {
 }
 
 // ============================================
+// BLOG - Articles auto-générés
+// ============================================
+
+model BlogPost {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  category    String
+  publishedAt DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  author      String   @default("Équipe MediTrouve")
+
+  // Version Grand Public
+  excerptPublic     String
+  contentPublic     String @db.Text
+  readTimePublic    Int
+
+  // Version Professionnels de Santé
+  excerptPro        String
+  contentPro        String @db.Text
+  readTimePro       Int
+
+  // SEO
+  keywords          String[]
+  seoTitle          String?
+  seoDescription    String?
+
+  // Sources
+  sources           Json
+  researchData      Json?
+
+  // Validation
+  validatedBy       String @default("Gemini Pro")
+  validationScore   Int?
+
+  // Stats
+  viewCountPublic   Int @default(0)
+  viewCountPro      Int @default(0)
+  isPublished       Boolean @default(true)
+
+  @@index([slug])
+  @@index([publishedAt])
+  @@index([category])
+}
+
+// ============================================
 // PUSH TOKENS (Mobile Notifications)
 // ============================================
 
