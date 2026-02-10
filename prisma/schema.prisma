@@ -756,3 +756,18 @@ model OutreachEmail {
   @@index([status])
   @@index([trackingId])
 }
+
+// ============================================
+// RATE LIMITING (serverless-compatible)
+// ============================================
+
+model RateLimit {
+  id         String   @id @default(cuid())
+  key        String   // e.g. "contact:192.168.1.1"
+  count      Int      @default(1)
+  windowStart DateTime @default(now())
+  expiresAt  DateTime
+
+  @@unique([key])
+  @@index([expiresAt])
+}
