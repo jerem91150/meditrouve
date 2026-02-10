@@ -658,3 +658,101 @@ model Referral {
   @@index([referralCodeId])
   @@index([status])
 }
+
+// ============================================
+// OUTREACH SYSTEM
+// ============================================
+
+enum ContactType {
+  PHARMACY
+  ASSOCIATION
+  PRESS
+  OTHER
+}
+
+enum ContactStatus {
+  ACTIVE
+  UNSUBSCRIBED
+  BOUNCED
+}
+
+enum CampaignMode {
+  AUTO
+  SEMI_AUTO
+}
+
+enum CampaignStatus {
+  DRAFT
+  RUNNING
+  PAUSED
+  DONE
+}
+
+enum OutreachEmailStatus {
+  DRAFT
+  APPROVED
+  SENT
+  OPENED
+  REPLIED
+  BOUNCED
+  REJECTED
+}
+
+model OutreachContact {
+  id          String        @id @default(cuid())
+  name        String
+  email       String        @unique
+  type        ContactType   @default(OTHER)
+  location    String?       // Département/Ville
+  specialty   String?       // Spécialité ou pathologie
+  notes       String?
+  status      ContactStatus @default(ACTIVE)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  emails      OutreachEmail[]
+
+  @@index([type])
+  @@index([status])
+  @@index([location])
+}
+
+model OutreachCampaign {
+  id          String          @id @default(cuid())
+  name        String
+  type        ContactType     // Target type
+  mode        CampaignMode    @default(SEMI_AUTO)
+  status      CampaignStatus  @default(DRAFT)
+  template    String          @db.Text // Base template
+  subject     String?         // Base subject line
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  emails      OutreachEmail[]
+
+  @@index([status])
+  @@index([type])
+}
+
+model OutreachEmail {
+  id          String              @id @default(cuid())
+  campaignId  String
+  contactId   String
+  subject     String
+  body        String              @db.Text
+  status      OutreachEmailStatus @default(DRAFT)
+  sentAt      DateTime?
+  openedAt    DateTime?
+  repliedAt   DateTime?
+  trackingId  String?             @unique @default(cuid())
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  campaign    OutreachCampaign    @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  contact     OutreachContact     @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId])
+  @@index([contactId])
+  @@index([status])
+  @@index([trackingId])
+}
