@@ -1,6 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;');
+}
+
 const contactSchema = z.object({
   name: z.string().min(2, 'Nom trop court').max(100),
   email: z.string().email('Email invalide'),
@@ -12,7 +21,6 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    // Validation
     const result = contactSchema.safeParse(body);
     if (!result.success) {
       return NextResponse.json(
@@ -23,10 +31,14 @@ export async function POST(request: NextRequest) {
 
     const { name, email, subject, message } = result.data;
 
-    // Envoyer l'email via Resend
+    // Sanitize all user inputs before HTML injection
+    const safeName = escapeHtml(name);
+    const safeEmail = escapeHtml(email);
+    const safeMessage = escapeHtml(message);
+
     const RESEND_API_KEY = process.env.RESEND_API_KEY;
     const EMAIL_FROM = process.env.EMAIL_FROM || 'MediTrouve <noreply@meditrouve.fr>';
-    const ADMIN_EMAIL = 'contact@meditrouve.fr'; // Email de destination
+    const ADMIN_EMAIL = 'contact@meditrouve.fr';
 
     if (RESEND_API_KEY && RESEND_API_KEY !== 're_...') {
       const subjectMap: Record<string, string> = {
@@ -39,7 +51,7 @@ export async function POST(request: NextRequest) {
         other: 'Autre',
       };
 
-      const emailSubject = `[Contact] ${subjectMap[subject] || subject} - ${name}`;
+      const emailSubject = `[Contact] ${subjectMap[subject] || escapeHtml(subject)} - ${safeName}`;
 
       await fetch('https://api.resend.com/emails', {
         method: 'POST',
@@ -54,26 +66,25 @@ export async function POST(request: NextRequest) {
           subject: emailSubject,
           html: `
             <h2>Nouveau message de contact</h2>
-            <p><strong>De:</strong> ${name} (${email})</p>
-            <p><strong>Sujet:</strong> ${subjectMap[subject] || subject}</p>
+            <p><strong>De:</strong> ${safeName} (${safeEmail})</p>
+            <p><strong>Sujet:</strong> ${subjectMap[subject] || escapeHtml(subject)}</p>
             <hr />
             <h3>Message:</h3>
-            <p>${message.replace(/\n/g, '<br>')}</p>
+            <p>${safeMessage.replace(/\n/g, '<br>')}</p>
             <hr />
             <p><small>Ce message a été envoyé depuis le formulaire de contact d'MediTrouve.</small></p>
           `,
         }),
       });
     } else {
-      // En dev, juste logger
       console.log('Contact form submission:', { name, email, subject, message });
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Contact form error:', error);
+    console.error('[CONTACT_FORM_ERROR]', error instanceof Error ? error.message : error);
     return NextResponse.json(
-      { error: 'Erreur lors de l\'envoi du message' },
+      { error: "Erreur lors de l'envoi du message" },
       { status: 500 }
     );
   }
