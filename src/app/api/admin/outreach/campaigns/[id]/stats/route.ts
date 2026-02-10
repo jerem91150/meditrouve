@@ -20,7 +20,6 @@ export async function GET(
           status: true,
           sentAt: true,
           openedAt: true,
-          clickedAt: true,
           contact: { select: { name: true, email: true, type: true } },
         },
       },
@@ -31,10 +30,10 @@ export async function GET(
     return NextResponse.json({ error: 'Campaign not found' }, { status: 404 });
   }
 
-  const statusCounts = campaign.emails.reduce((acc, e) => {
+  const statusCounts = campaign.emails.reduce<Record<string, number>>((acc, e) => {
     acc[e.status] = (acc[e.status] || 0) + 1;
     return acc;
-  }, {} as Record<string, number>);
+  }, {});
 
   return NextResponse.json({
     campaign: { id: campaign.id, name: campaign.name, type: campaign.type },

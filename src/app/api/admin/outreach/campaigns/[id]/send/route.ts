@@ -14,7 +14,7 @@ export async function POST(
   const { emailId } = body as { emailId?: string };
 
   try {
-    const result = await sendCampaignEmails(id, emailId);
+    const result = await sendCampaignEmails(id, emailId ? { emailId } : undefined);
     return NextResponse.json(result);
   } catch (error) {
     console.error('[ADMIN_SEND_ERROR]', error instanceof Error ? error.message : error);
