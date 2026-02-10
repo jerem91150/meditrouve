@@ -1,9 +1,14 @@
+import { requireAdmin } from "@/lib/admin-auth";
+
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
 // GET — List contacts with filters
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
+  const { error: authError } = await requireAdmin();
+  if (authError) return authError;
+
   const type = searchParams.get('type');
   const status = searchParams.get('status');
   const search = searchParams.get('search');
@@ -40,6 +45,9 @@ export async function POST(req: NextRequest) {
 
   // CSV Import
   if (contentType.includes('text/csv') || contentType.includes('multipart/form-data')) {
+  const { error: authError } = await requireAdmin();
+  if (authError) return authError;
+
     const text = await req.text();
     const lines = text.trim().split('\n');
     const header = lines[0].toLowerCase().split(',').map(h => h.trim());
@@ -116,6 +124,9 @@ export async function POST(req: NextRequest) {
 // DELETE — Delete a contact
 export async function DELETE(req: NextRequest) {
   const { id } = await req.json();
+  const { error: authError } = await requireAdmin();
+  if (authError) return authError;
+
   await prisma.outreachContact.delete({ where: { id } });
   return NextResponse.json({ ok: true });
 }
@@ -123,6 +134,9 @@ export async function DELETE(req: NextRequest) {
 // PATCH — Update a contact
 export async function PATCH(req: NextRequest) {
   const { id, ...data } = await req.json();
+  const { error: authError } = await requireAdmin();
+  if (authError) return authError;
+
   const contact = await prisma.outreachContact.update({
     where: { id },
     data,

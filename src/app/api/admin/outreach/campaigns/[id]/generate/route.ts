@@ -1,9 +1,14 @@
+import { requireAdmin } from "@/lib/admin-auth";
+
 import { NextRequest, NextResponse } from 'next/server';
 import { generateCampaignEmails } from '@/lib/outreach-ai';
 
 export async function POST(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
+  const { error: authError } = await requireAdmin();
+  if (authError) return authError;
+
 ) {
   const { id } = await params;
 

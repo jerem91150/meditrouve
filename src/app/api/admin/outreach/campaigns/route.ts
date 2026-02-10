@@ -1,9 +1,14 @@
+import { requireAdmin } from "@/lib/admin-auth";
+
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
 // GET — List campaigns
 export async function GET() {
   const campaigns = await prisma.outreachCampaign.findMany({
+  const { error: authError } = await requireAdmin();
+  if (authError) return authError;
+
     orderBy: { createdAt: 'desc' },
     include: {
       _count: {
@@ -34,6 +39,9 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const body = await req.json();
   const { name, type, mode, template, subject } = body;
+  const { error: authError } = await requireAdmin();
+  if (authError) return authError;
+
 
   if (!name || !type || !template) {
     return NextResponse.json(
