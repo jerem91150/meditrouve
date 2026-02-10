@@ -1,0 +1,19 @@
+{
+  "name": "twitter-bot-alertemedicaments",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "bot": "npx ts-node index.ts",
+    "dry-run": "DRY_RUN=true npx ts-node index.ts"
+  },
+  "dependencies": {
+    "twitter-api-v2": "^1.17.0",
+    "iconv-lite": "^0.6.3",
+    "dotenv": "^16.4.0"
+  },
+  "devDependencies": {
+    "ts-node": "^10.9.2",
+    "typescript": "^5.6.0",
+    "@types/node": "^22.0.0"
+  }
+}
