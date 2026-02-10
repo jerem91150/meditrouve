@@ -1,15 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { runPipeline } from '../../../../../scripts/auto-blog/pipeline';
+import { runBDPMPipeline } from '../../../../../scripts/auto-blog/bdpm-pipeline';
 
 export const maxDuration = 300; // 5 minutes max (Vercel Pro)
 
 /**
- * 🕘 CRON : Génération automatique d'articles de blog
+ * 🕘 CRON : Génération automatique d'articles SEO (BDPM data-driven)
  * Déclenché quotidiennement à 9h via Vercel Cron
  * Sécurisé par CRON_SECRET
  */
 export async function GET(request: NextRequest) {
-  // Vérification sécurité
   const authHeader = request.headers.get('authorization');
   const cronSecret = process.env.CRON_SECRET;
 
@@ -17,13 +16,13 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  console.log('🕘 Cron generate-blog déclenché');
+  console.log('🕘 Cron generate-blog BDPM déclenché');
 
   try {
-    const result = await runPipeline({
-      maxTopics: 6,
-      topN: 3,
-      minScore: 80,
+    const result = await runBDPMPipeline({
+      maxTopics: 10,   // Analyse 10 ruptures
+      topN: 2,         // Génère 2 articles/jour max
+      minScore: 75,    // Seuil publication
       dryRun: false,
     });
 

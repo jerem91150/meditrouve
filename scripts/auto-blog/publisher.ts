@@ -109,3 +109,14 @@ export async function disconnect(): Promise<void> {
     await prisma.$disconnect();
   }
 }
+
+/**
+ * 📋 Récupérer les slugs existants pour déduplication
+ */
+export async function getExistingSlugs(): Promise<Set<string>> {
+  const db = getPrisma();
+  const posts = await db.blogPost.findMany({
+    select: { slug: true },
+  });
+  return new Set(posts.map(p => p.slug));
+}
