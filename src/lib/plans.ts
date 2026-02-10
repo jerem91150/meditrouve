@@ -1,6 +1,8 @@
 // Configuration des plans d'abonnement MediTrouve
 // Philosophie : FREE généreux, PREMIUM pour les power users, FAMILLE pour les aidants
 
+export type AlertFrequency = 'daily' | 'realtime';
+
 export const PLANS = {
   FREE: {
     id: 'FREE',
@@ -13,6 +15,7 @@ export const PLANS = {
       alerts: {
         unlimited: true,
         types: ['RUPTURE', 'TENSION', 'AVAILABLE'], // Tous les types d'alertes
+        alertFrequency: 'daily' as AlertFrequency, // Digest quotidien
       },
       // Profils
       profiles: {
@@ -37,7 +40,8 @@ export const PLANS = {
       },
       // OCR Ordonnance
       ocr: {
-        enabled: false,
+        enabled: true,
+        monthlyLimit: 1, // 1 scan par mois
       },
       // Prédictions IA
       predictions: {
@@ -59,8 +63,8 @@ export const PLANS = {
   PREMIUM: {
     id: 'PREMIUM',
     name: 'Premium',
-    price: 3.99,
-    priceYearly: 39.99, // ~2 mois offerts
+    price: 2.99,
+    priceYearly: 29.99, // ~2 mois offerts
     priceId: process.env.STRIPE_PREMIUM_PRICE_ID,
     priceIdYearly: process.env.STRIPE_PREMIUM_YEARLY_PRICE_ID,
     description: 'Pour ceux qui veulent aller plus loin',
@@ -70,6 +74,7 @@ export const PLANS = {
         unlimited: true,
         types: ['RUPTURE', 'TENSION', 'AVAILABLE', 'PREDICTION', 'ANY_CHANGE'],
         predictions: true, // Alertes prédictives
+        alertFrequency: 'realtime' as AlertFrequency, // Alertes temps réel
       },
       // Profils
       profiles: {
@@ -119,8 +124,8 @@ export const PLANS = {
   FAMILLE: {
     id: 'FAMILLE',
     name: 'Famille',
-    price: 7.99,
-    priceYearly: 79.99, // ~2 mois offerts
+    price: 6.99,
+    priceYearly: 69.99, // ~2 mois offerts
     priceId: process.env.STRIPE_FAMILLE_PRICE_ID,
     priceIdYearly: process.env.STRIPE_FAMILLE_YEARLY_PRICE_ID,
     description: 'Prenez soin de toute la famille',
@@ -130,6 +135,7 @@ export const PLANS = {
         unlimited: true,
         types: ['RUPTURE', 'TENSION', 'AVAILABLE', 'PREDICTION', 'ANY_CHANGE'],
         predictions: true,
+        alertFrequency: 'realtime' as AlertFrequency, // Alertes temps réel
       },
       // Profils - La vraie différence
       profiles: {
@@ -185,7 +191,9 @@ export const PLAN_LIMITS = {
     maxReminders: 5,
     maxFamilyInvites: 0,
     searchHistoryDays: 30,
-    hasOcr: false,
+    hasOcr: true,
+    maxOcrPerMonth: 1,
+    alertFrequency: 'daily' as AlertFrequency,
     hasPredictions: false,
     hasDataExport: false,
     hasFullHistory: false,
@@ -199,6 +207,8 @@ export const PLAN_LIMITS = {
     maxFamilyInvites: 0,
     searchHistoryDays: -1, // Illimité
     hasOcr: true,
+    maxOcrPerMonth: -1, // Illimité
+    alertFrequency: 'realtime' as AlertFrequency,
     hasPredictions: true,
     hasDataExport: true,
     hasFullHistory: true,
@@ -212,6 +222,8 @@ export const PLAN_LIMITS = {
     maxFamilyInvites: 5,
     searchHistoryDays: -1,
     hasOcr: true,
+    maxOcrPerMonth: -1, // Illimité
+    alertFrequency: 'realtime' as AlertFrequency,
     hasPredictions: true,
     hasDataExport: true,
     hasFullHistory: true,
