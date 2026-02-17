@@ -6,8 +6,9 @@
 
 import { ResearchFinding, GeneratedArticle, GeneratedArticleSchema } from './types';
 
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
-const GENERATION_MODEL = 'claude-sonnet-4-20250514';
+const GENERATION_MODEL = 'anthropic/claude-sonnet-4';
 
 /**
  * Extrait le nom court du médicament depuis le topic
@@ -24,9 +25,11 @@ export async function generateSEOArticle(finding: ResearchFinding): Promise<Gene
   const medName = extractMedName(finding.topic);
   console.log(`✍️ Génération article SEO pour : "${medName}"...`);
 
-  if (!ANTHROPIC_API_KEY) {
-    throw new Error('❌ ANTHROPIC_API_KEY manquante');
+  const apiKey = OPENROUTER_API_KEY || ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    throw new Error('❌ OPENROUTER_API_KEY ou ANTHROPIC_API_KEY manquante');
   }
+  const useOpenRouter = !!OPENROUTER_API_KEY;
 
   const today = new Date().toISOString().split('T')[0];
   const slugBase = `rupture-${medName.toLowerCase()
@@ -111,28 +114,29 @@ Réponds STRICTEMENT en JSON valide :
 IMPORTANT : JSON valide. Escape les guillemets. Le contenu markdown doit être complet et prêt à publier.`;
 
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: GENERATION_MODEL,
-        max_tokens: 16000,
-        system: systemPrompt,
-        messages: [{ role: 'user', content: userPrompt }],
-      }),
-    });
+    const endpoint = useOpenRouter
+      ? "https://openrouter.ai/api/v1/chat/completions"
+      : "https://api.anthropic.com/v1/messages";
+
+    const headers: Record<string, string> = useOpenRouter
+      ? { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` }
+      : { "Content-Type": "application/json", "x-api-key": apiKey!, "anthropic-version": "2023-06-01" };
+
+    const body = useOpenRouter
+      ? JSON.stringify({ model: GENERATION_MODEL, max_tokens: 16000, messages: [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }] })
+      : JSON.stringify({ model: GENERATION_MODEL, max_tokens: 16000, system: systemPrompt, messages: [{ role: "user", content: userPrompt }] });
+
+    const response = await fetch(endpoint, { method: "POST", headers, body });
 
     if (!response.ok) {
       const err = await response.text();
-      throw new Error(`Anthropic API error ${response.status}: ${err}`);
+      throw new Error(`API error ${response.status}: ${err}`);
     }
 
     const data = await response.json();
-    const textContent = data.content?.find((c: any) => c.type === 'text')?.text;
+    const textContent = useOpenRouter
+      ? data.choices?.[0]?.message?.content
+      : data.content?.find((c: any) => c.type === "text")?.text;
 
     if (!textContent) {
       throw new Error('Pas de contenu dans la réponse');
