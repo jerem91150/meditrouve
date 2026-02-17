@@ -102,7 +102,7 @@ export const GeneratedArticleSchema = z.object({
   keywords: z.array(z.string()).min(3),
   seoTitle: z.string().max(70).optional(),
   seoDescription: z.string().max(160).optional(),
-  sources: z.array(SourceSchema).min(5),
+  sources: z.array(SourceSchema).min(1),
   researchData: z.any().optional(),
 });
 
