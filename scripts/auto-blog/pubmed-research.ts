@@ -1,7 +1,7 @@
 // ============================================
-// 🔬 PUBMED RESEARCH MODULE
+// 🔬 PUBMED RESEARCH MODULE v2
 // Recherche d'études scientifiques récentes via PubMed E-utilities
-// Gratuit, pas besoin d'API key
+// Filtres de date corrigés, timeout robuste
 // ============================================
 
 import { ResearchFinding } from './types';
@@ -18,54 +18,55 @@ interface PubMedArticle {
   doi: string;
 }
 
-// Requêtes de recherche PubMed ciblées
+// Requêtes PubMed avec filtres de date fiables (mindate/maxdate)
 const PUBMED_QUERIES = [
   {
-    query: '(drug shortage OR medication shortage) AND France AND ("2025"[Date - Publication] OR "2026"[Date - Publication])',
+    query: '(drug shortage) AND (France OR Europe)',
     category: 'rupture-stock',
-    label: 'Pénuries médicaments France',
+    label: 'Penuries medicaments',
   },
   {
-    query: '(clinical trial results OR phase 3) AND (drug OR treatment) AND ("2025"[Date - Publication] OR "2026"[Date - Publication]) AND (efficacy OR safety)',
+    query: '(clinical trial[pt]) AND (results OR efficacy) AND (novel OR new)',
     category: 'etude-scientifique',
-    label: 'Essais cliniques récents',
+    label: 'Essais cliniques recents',
   },
   {
-    query: '(new drug approval OR novel therapy OR breakthrough) AND ("2025"[Date - Publication] OR "2026"[Date - Publication])',
+    query: '(drug approval OR novel therapy OR breakthrough therapy)',
     category: 'avancee-medicale',
-    label: 'Nouvelles thérapies',
+    label: 'Nouvelles therapies',
   },
   {
-    query: '(pharmacovigilance OR adverse drug reaction OR drug safety) AND ("2025"[Date - Publication] OR "2026"[Date - Publication]) AND (France OR Europe)',
+    query: '(pharmacovigilance OR adverse drug reaction OR drug safety signal)',
     category: 'pharmacovigilance',
     label: 'Pharmacovigilance',
   },
   {
-    query: '(meta-analysis OR systematic review) AND (drug OR medication OR treatment) AND ("2025"[Date - Publication] OR "2026"[Date - Publication])',
+    query: '(meta-analysis[pt] OR systematic review[pt]) AND (treatment OR drug)',
     category: 'etude-scientifique',
-    label: 'Méta-analyses récentes',
+    label: 'Meta-analyses recentes',
   },
 ];
 
-/**
- * Recherche PubMed : retourne les PMIDs
- */
-async function searchPubMed(query: string, maxResults: number = 5): Promise<string[]> {
-  const url = `${PUBMED_BASE}/esearch.fcgi?db=pubmed&term=${encodeURIComponent(query)}&retmax=${maxResults}&sort=date&retmode=json`;
-  const response = await fetch(url);
+async function searchPubMed(query: string, maxResults: number = 3): Promise<string[]> {
+  // Utiliser mindate/maxdate pour filtrer les 6 derniers mois
+  const sixMonthsAgo = new Date();
+  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+  const mindate = sixMonthsAgo.toISOString().split('T')[0].replace(/-/g, '/');
+  const maxdate = new Date().toISOString().split('T')[0].replace(/-/g, '/');
+
+  const url = `${PUBMED_BASE}/esearch.fcgi?db=pubmed&term=${encodeURIComponent(query)}&retmax=${maxResults}&sort=date&datetype=pdat&mindate=${mindate}&maxdate=${maxdate}&retmode=json`;
+
+  const response = await fetch(url, { signal: AbortSignal.timeout(10000) });
   if (!response.ok) throw new Error(`PubMed search error: ${response.status}`);
   const data = await response.json();
   return data.esearchresult?.idlist || [];
 }
 
-/**
- * Récupère les détails d'articles PubMed
- */
 async function fetchPubMedDetails(pmids: string[]): Promise<PubMedArticle[]> {
   if (pmids.length === 0) return [];
 
   const url = `${PUBMED_BASE}/efetch.fcgi?db=pubmed&id=${pmids.join(',')}&retmode=xml`;
-  const response = await fetch(url);
+  const response = await fetch(url, { signal: AbortSignal.timeout(15000) });
   if (!response.ok) throw new Error(`PubMed fetch error: ${response.status}`);
   const xml = await response.text();
 
@@ -79,20 +80,15 @@ async function fetchPubMedDetails(pmids: string[]): Promise<PubMedArticle[]> {
       ?.map(t => t.replace(/<[^>]+>/g, '').trim())
       .join(' ') || '';
 
-    // Extraire auteurs
     const authorMatches = articleXml.match(/<LastName>([\s\S]*?)<\/LastName>/g) || [];
     const authors = authorMatches.slice(0, 5).map(a => a.replace(/<[^>]+>/g, '').trim());
 
-    // Journal
     const journal = articleXml.match(/<Title>([\s\S]*?)<\/Title>/)?.[1]?.trim() || '';
 
-    // Date de publication
     const year = articleXml.match(/<PubDate>[\s\S]*?<Year>([\s\S]*?)<\/Year>/)?.[1]?.trim() || '';
     const month = articleXml.match(/<PubDate>[\s\S]*?<Month>([\s\S]*?)<\/Month>/)?.[1]?.trim() || '01';
-    const day = articleXml.match(/<PubDate>[\s\S]*?<Day>([\s\S]*?)<\/Day>/)?.[1]?.trim() || '01';
-    const pubDate = year ? `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}` : '';
+    const pubDate = year ? `${year}-${month.length <= 2 ? month.padStart(2, '0') : '01'}` : '';
 
-    // DOI
     const doi = articleXml.match(/<ArticleId IdType="doi">([\s\S]*?)<\/ArticleId>/)?.[1]?.trim() || '';
 
     if (title) {
@@ -103,18 +99,15 @@ async function fetchPubMedDetails(pmids: string[]): Promise<PubMedArticle[]> {
   return articles;
 }
 
-/**
- * Recherche d'études liées pour le cross-référencement
- */
-async function findRelatedStudies(pmid: string, maxResults: number = 3): Promise<PubMedArticle[]> {
+async function findRelatedStudies(pmid: string): Promise<PubMedArticle[]> {
   try {
     const url = `${PUBMED_BASE}/elink.fcgi?dbfrom=pubmed&db=pubmed&id=${pmid}&cmd=neighbor_score&retmode=json`;
-    const response = await fetch(url);
+    const response = await fetch(url, { signal: AbortSignal.timeout(8000) });
     if (!response.ok) return [];
     const data = await response.json();
 
     const links = data.linksets?.[0]?.linksetdbs?.find((l: any) => l.linkname === 'pubmed_pubmed')?.links || [];
-    const relatedPmids = links.slice(0, maxResults).map((l: any) => String(l));
+    const relatedPmids = links.slice(0, 2).map((l: any) => String(l));
 
     if (relatedPmids.length === 0) return [];
     return fetchPubMedDetails(relatedPmids);
@@ -124,18 +117,18 @@ async function findRelatedStudies(pmid: string, maxResults: number = 3): Promise
 }
 
 /**
- * 🔬 Recherche PubMed : études scientifiques récentes avec cross-référencement
+ * 🔬 Recherche PubMed v2 : études récentes avec cross-référencement
  */
 export async function researchFromPubMed(maxTopics: number = 4): Promise<ResearchFinding[]> {
-  console.log('🔬 Recherche PubMed : études scientifiques récentes...');
+  console.log('🔬 Recherche PubMed : etudes scientifiques recentes...');
 
   const allArticles: Array<PubMedArticle & { category: string; queryLabel: string }> = [];
 
   for (const q of PUBMED_QUERIES) {
     try {
-      const pmids = await searchPubMed(q.query, 3);
+      const pmids = await searchPubMed(q.query, 2);
       if (pmids.length === 0) {
-        console.log(`  ⚠️ ${q.label}: aucun résultat`);
+        console.log(`  ⚠️ ${q.label}: aucun resultat`);
         continue;
       }
       const articles = await fetchPubMedDetails(pmids);
@@ -145,22 +138,24 @@ export async function researchFromPubMed(maxTopics: number = 4): Promise<Researc
       // Rate limit PubMed (3 req/sec sans API key)
       await new Promise(r => setTimeout(r, 400));
     } catch (err) {
-      console.log(`  ⚠️ Erreur ${q.label}: ${err instanceof Error ? err.message : String(err)}`);
+      console.log(`  ⚠️ ${q.label}: ${err instanceof Error ? err.message : String(err)}`);
     }
+  }
+
+  if (allArticles.length === 0) {
+    console.log('🔬 Aucune etude trouvee sur PubMed');
+    return [];
   }
 
   // Scorer les articles
   const scored = allArticles.map(article => {
     let score = 50;
 
-    // Articles avec abstract = plus riches
-    if (article.abstract && article.abstract.length > 200) score += 20;
+    if (article.abstract && article.abstract.length > 200) score += 15;
 
-    // Journal de haut niveau
-    const topJournals = ['lancet', 'nejm', 'nature', 'jama', 'bmj', 'cell', 'science'];
+    const topJournals = ['lancet', 'nejm', 'new england', 'nature', 'jama', 'bmj', 'cell', 'science', 'annals'];
     if (topJournals.some(j => article.journal.toLowerCase().includes(j))) score += 25;
 
-    // Essais cliniques / méta-analyses
     const text = `${article.title} ${article.abstract}`.toLowerCase();
     if (/meta-analysis|systematic review/.test(text)) score += 15;
     if (/randomized|randomised|phase\s*[23]/.test(text)) score += 10;
@@ -171,21 +166,16 @@ export async function researchFromPubMed(maxTopics: number = 4): Promise<Researc
 
   scored.sort((a, b) => b.score - a.score);
   const selected = scored.slice(0, maxTopics);
-
   const today = new Date().toISOString().split('T')[0];
 
-  // Pour chaque article sélectionné, chercher des études liées
   const findings: ResearchFinding[] = [];
 
   for (const article of selected) {
-    // Chercher études liées pour cross-référencement
     let relatedStudies: PubMedArticle[] = [];
     try {
-      relatedStudies = await findRelatedStudies(article.pmid, 3);
-      await new Promise(r => setTimeout(r, 400)); // Rate limit
-    } catch {
-      // Silently continue
-    }
+      relatedStudies = await findRelatedStudies(article.pmid);
+      await new Promise(r => setTimeout(r, 400));
+    } catch { /* continue */ }
 
     const sources = [
       {
@@ -212,38 +202,36 @@ export async function researchFromPubMed(maxTopics: number = 4): Promise<Researc
     ];
 
     // Garantir minimum 3 sources
-    if (sources.length < 3) {
+    while (sources.length < 3) {
       sources.push({
         url: 'https://ansm.sante.fr',
-        title: 'ANSM - Agence nationale de sécurité du médicament',
+        title: 'ANSM - Agence nationale de securite du medicament',
         publisher: 'ANSM',
         date: today,
         credibility: 'institutional' as const,
       });
     }
 
-    const keyFacts = [
-      article.title,
-      `Journal: ${article.journal}`,
-      article.authors.length > 0 ? `Auteurs: ${article.authors.slice(0, 3).join(', ')}${article.authors.length > 3 ? ' et al.' : ''}` : '',
-      article.abstract ? article.abstract.substring(0, 300) : '',
-      relatedStudies.length > 0 ? `${relatedStudies.length} études liées identifiées pour cross-référencement` : '',
-    ].filter(Boolean);
-
     findings.push({
       id: `pubmed-${article.pmid}`,
       topic: article.title,
       summary: article.abstract
         ? article.abstract.substring(0, 500)
-        : `Étude publiée dans ${article.journal}: ${article.title}`,
+        : `Etude publiee dans ${article.journal}: ${article.title}`,
       category: article.category as any,
       sources,
-      keyFacts,
+      keyFacts: [
+        article.title,
+        `Journal: ${article.journal}`,
+        article.authors.length > 0 ? `Auteurs: ${article.authors.slice(0, 3).join(', ')}${article.authors.length > 3 ? ' et al.' : ''}` : '',
+        article.abstract ? article.abstract.substring(0, 250) : '',
+        relatedStudies.length > 0 ? `${relatedStudies.length} etudes liees pour cross-referencement` : '',
+      ].filter(Boolean),
       dateDiscovered: today,
       relevanceScore: article.score,
     });
   }
 
-  console.log(`🔬 ${findings.length} études scientifiques sélectionnées`);
+  console.log(`🔬 ${findings.length} etudes selectionnees`);
   return findings;
 }
