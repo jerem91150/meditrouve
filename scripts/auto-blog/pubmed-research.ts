@@ -4,7 +4,7 @@
 // Filtres de date corrigés, timeout robuste
 // ============================================
 
-import { ResearchFinding } from './types';
+import { ResearchFinding, Source } from './types';
 
 const PUBMED_BASE = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils';
 
@@ -177,7 +177,7 @@ export async function researchFromPubMed(maxTopics: number = 4): Promise<Researc
       await new Promise(r => setTimeout(r, 400));
     } catch { /* continue */ }
 
-    const sources = [
+    const sources: Source[] = [
       {
         url: `https://pubmed.ncbi.nlm.nih.gov/${article.pmid}/`,
         title: article.title.substring(0, 100),
@@ -208,7 +208,7 @@ export async function researchFromPubMed(maxTopics: number = 4): Promise<Researc
         title: 'ANSM - Agence nationale de securite du medicament',
         publisher: 'ANSM',
         date: today,
-        credibility: 'institutional' as const,
+        credibility: 'institutional',
       });
     }
 
