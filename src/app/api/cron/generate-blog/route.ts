@@ -21,8 +21,8 @@ export async function GET(request: NextRequest) {
 
   try {
     const result = await runBDPMPipeline({
-      maxTopics: 12,   // Analyse 12 sujets (4 par source)
-      topN: 3,         // Genere 3 articles/jour (1 rupture + 1 etude + 1 actu)
+      maxTopics: 8,   // Analyse 8 sujets
+      topN: 2,         // Genere 2 articles diversifies/jour
       minScore: 70,    // Seuil publication
       dryRun: false,
     });

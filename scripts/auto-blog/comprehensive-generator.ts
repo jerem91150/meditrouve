@@ -320,7 +320,7 @@ export async function generateComprehensiveArticle(finding: ResearchFinding): Pr
     const body = useOpenRouter
       ? JSON.stringify({
           model: GENERATION_MODEL,
-          max_tokens: 16000,
+          max_tokens: 10000,
           messages: [
             { role: 'system', content: system },
             { role: 'user', content: user },
@@ -328,12 +328,12 @@ export async function generateComprehensiveArticle(finding: ResearchFinding): Pr
         })
       : JSON.stringify({
           model: GENERATION_MODEL,
-          max_tokens: 16000,
+          max_tokens: 10000,
           system,
           messages: [{ role: 'user', content: user }],
         });
 
-    const response = await fetch(endpoint, { method: 'POST', headers, body });
+    const response = await fetch(endpoint, { method: 'POST', headers, body, signal: AbortSignal.timeout(90000) });
 
     if (!response.ok) {
       const err = await response.text();
