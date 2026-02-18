@@ -1,6 +1,6 @@
 // ============================================
-// 📝 AUTO-BLOG TYPES
-// Types TypeScript stricts pour le pipeline de génération d'articles
+// 📝 AUTO-BLOG TYPES v2
+// Types TypeScript pour le pipeline multi-sources
 // ============================================
 
 import { z } from 'zod/v4';
@@ -12,8 +12,8 @@ import { z } from 'zod/v4';
 export const SourceSchema = z.object({
   url: z.string().url(),
   title: z.string().min(1),
-  publisher: z.string().min(1), // ANSM, HAS, Vidal, etc.
-  date: z.string(), // ISO date or "2025-02-09" format
+  publisher: z.string().min(1),
+  date: z.string(),
   credibility: z.enum(['institutional', 'scientific', 'professional', 'media']),
 });
 
@@ -22,7 +22,7 @@ export type Source = z.infer<typeof SourceSchema>;
 export const ResearchFindingSchema = z.object({
   id: z.string(),
   topic: z.string().min(10),
-  summary: z.string().min(50),
+  summary: z.string().min(20),
   category: z.enum([
     'rupture-stock',
     'alerte-sanitaire',
@@ -30,11 +30,14 @@ export const ResearchFindingSchema = z.object({
     'reglementation',
     'prevention',
     'pharmacovigilance',
+    'etude-scientifique',
+    'avancee-medicale',
+    'actualite-sante',
   ]),
-  sources: z.array(SourceSchema).min(3),
+  sources: z.array(SourceSchema).min(1),
   relevanceScore: z.number().min(0).max(100).optional(),
   dateDiscovered: z.string(),
-  keyFacts: z.array(z.string()).min(2),
+  keyFacts: z.array(z.string()).min(1),
 });
 
 export type ResearchFinding = z.infer<typeof ResearchFindingSchema>;
@@ -52,10 +55,10 @@ export type ResearchResult = z.infer<typeof ResearchResultSchema>;
 // ============================================
 
 export const ValidationCriteriaSchema = z.object({
-  timeliness: z.number().min(0).max(100), // Actualité du sujet
-  sourceReliability: z.number().min(0).max(100), // Fiabilité des sources
-  patientImpact: z.number().min(0).max(100), // Impact patient
-  professionalRelevance: z.number().min(0).max(100), // Pertinence pro
+  timeliness: z.number().min(0).max(100),
+  sourceReliability: z.number().min(0).max(100),
+  patientImpact: z.number().min(0).max(100),
+  professionalRelevance: z.number().min(0).max(100),
   overallScore: z.number().min(0).max(100),
 });
 
@@ -78,8 +81,8 @@ export type ValidationResult = z.infer<typeof ValidationResultSchema>;
 export const ArticlePublicSchema = z.object({
   title: z.string().min(10),
   excerpt: z.string().min(50).max(300),
-  content: z.string().min(500), // Markdown, 800-1000 mots
-  readTime: z.number().min(1).max(15),
+  content: z.string().min(500),
+  readTime: z.number().min(1).max(20),
 });
 
 export type ArticlePublic = z.infer<typeof ArticlePublicSchema>;
@@ -87,8 +90,8 @@ export type ArticlePublic = z.infer<typeof ArticlePublicSchema>;
 export const ArticleProSchema = z.object({
   title: z.string().min(10),
   excerpt: z.string().min(50).max(400),
-  content: z.string().min(1000), // Markdown, 1500-2000 mots
-  readTime: z.number().min(3).max(30),
+  content: z.string().min(1000),
+  readTime: z.number().min(3).max(40),
 });
 
 export type ArticlePro = z.infer<typeof ArticleProSchema>;
@@ -142,20 +145,20 @@ export interface PipelineResult {
     published: boolean;
   }>;
   errors: string[];
-  duration: number; // ms
+  duration: number;
   timestamp: string;
 }
 
 export interface PipelineConfig {
-  maxTopics: number; // Default 6
-  topN: number; // Default 3 (top findings to generate)
-  minScore: number; // Default 80
-  dryRun: boolean; // Don't publish
+  maxTopics: number;
+  topN: number;
+  minScore: number;
+  dryRun: boolean;
 }
 
 export const DEFAULT_CONFIG: PipelineConfig = {
-  maxTopics: 6,
+  maxTopics: 10,
   topN: 3,
-  minScore: 80,
+  minScore: 70,
   dryRun: false,
 };
