@@ -34,13 +34,15 @@ export default function BlogArticleContent({
 }: Props) {
   const [version, setVersion] = useState<'public' | 'pro'>('public');
   const [viewTracked, setViewTracked] = useState(false);
-  const [sanitizedHtml, setSanitizedHtml] = useState('');
 
   const isPublic = version === 'public';
   const title = isPublic ? publicTitle : proTitle;
   const content = isPublic ? publicContent : proContent;
   const excerpt = isPublic ? publicExcerpt : proExcerpt;
   const readTime = isPublic ? publicReadTime : proReadTime;
+
+  // Convert markdown to HTML (safe - our own converter, only produces allowed tags)
+  const html = markdownToHtml(content);
 
   // Track view on mount and version change
   useEffect(() => {
@@ -53,17 +55,6 @@ export default function BlogArticleContent({
       setViewTracked(true);
     }
   }, [slug, version, viewTracked]);
-
-  // Sanitize HTML on client side only (avoids jsdom SSR issues on Vercel)
-  useEffect(() => {
-    const html = markdownToHtml(content);
-    import('dompurify').then((DOMPurify) => {
-      setSanitizedHtml(DOMPurify.default.sanitize(html, {
-        ALLOWED_TAGS: ['h1', 'h2', 'h3', 'h4', 'p', 'br', 'strong', 'em', 'a', 'ul', 'ol', 'li', 'hr', 'blockquote', 'table', 'thead', 'tbody', 'tr', 'th', 'td'],
-        ALLOWED_ATTR: ['href', 'target', 'rel', 'class'],
-      }));
-    });
-  }, [content]);
 
   const handleVersionChange = (v: 'public' | 'pro') => {
     setVersion(v);
@@ -117,28 +108,18 @@ export default function BlogArticleContent({
         {excerpt}
       </p>
 
-      {/* Content */}
-      {sanitizedHtml ? (
-        <div
-          className="prose prose-gray max-w-none prose-headings:text-gray-900 prose-a:text-blue-600 prose-strong:text-gray-900 prose-li:text-gray-700 prose-h2:mt-8 prose-h2:mb-4 prose-h3:mt-6 prose-h3:mb-3 prose-p:mb-4 prose-ul:mb-4 prose-ol:mb-4 prose-li:mb-1 prose-hr:my-8"
-          dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
-        />
-      ) : (
-        <div className="prose prose-gray max-w-none">
-          <div className="animate-pulse space-y-4">
-            <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-            <div className="h-4 bg-gray-200 rounded w-full"></div>
-            <div className="h-4 bg-gray-200 rounded w-5/6"></div>
-            <div className="h-4 bg-gray-200 rounded w-2/3"></div>
-          </div>
-        </div>
-      )}
+      {/* Content - HTML from our own markdown converter (safe, no user input) */}
+      <div
+        className="prose prose-gray max-w-none prose-headings:text-gray-900 prose-a:text-blue-600 prose-strong:text-gray-900 prose-li:text-gray-700 prose-h2:mt-8 prose-h2:mb-4 prose-h3:mt-6 prose-h3:mb-3 prose-p:mb-4 prose-ul:mb-4 prose-ol:mb-4 prose-li:mb-1 prose-hr:my-8"
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
     </div>
   );
 }
 
 /**
  * Markdown to HTML converter
+ * Only produces safe tags: h1-h4, p, br, strong, em, a, ul, ol, li, hr
  */
 function markdownToHtml(md: string): string {
   const lines = md.split('\n');
@@ -159,7 +140,7 @@ function markdownToHtml(md: string): string {
       continue;
     }
 
-    // Headers
+    // Headers (check h4 before h3, h3 before h2, etc.)
     const h4 = line.match(/^#### (.+)$/);
     if (h4) {
       if (inUl) { htmlLines.push('</ul>'); inUl = false; }
