@@ -56,6 +56,7 @@ export default function HomePage() {
             <div className="hidden md:flex items-center gap-8">
               <a href="#features" className="text-gray-600 hover:text-gray-900 font-medium transition-colors">Fonctionnalites</a>
               <Link href="/medications" className="text-gray-600 hover:text-gray-900 font-medium transition-colors">Medicaments</Link>
+              <Link href="/blog" className="text-gray-600 hover:text-gray-900 font-medium transition-colors">Blog Sante</Link>
               <Link href="/login" className="text-gray-600 hover:text-gray-900 font-medium transition-colors">Connexion</Link>
               <Link href="/register" className="relative group">
                 <div className="absolute -inset-1 bg-gradient-to-r from-teal-500 to-cyan-600 rounded-full blur opacity-70 group-hover:opacity-100 transition duration-200"></div>
@@ -232,6 +233,7 @@ export default function HomePage() {
               <ul className="space-y-3">
                 <li><Link href="/medications" className="hover:text-white transition-colors">Medicaments</Link></li>
                 <li><a href="#features" className="hover:text-white transition-colors">Fonctionnalites</a></li>
+                <li><Link href="/blog" className="hover:text-white transition-colors">Blog Sante</Link></li>
                 <li><Link href="/login" className="hover:text-white transition-colors">Connexion</Link></li>
               </ul>
             </div>
