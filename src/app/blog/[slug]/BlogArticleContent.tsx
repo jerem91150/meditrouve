@@ -16,16 +16,11 @@ interface Props {
   viewCountPro: number;
 }
 
-/**
- * Composant client pour le toggle Grand Public / Professionnels
- */
 export default function BlogArticleContent({
   slug,
-  publicTitle,
   publicContent,
   publicExcerpt,
   publicReadTime,
-  proTitle,
   proContent,
   proExcerpt,
   proReadTime,
@@ -36,15 +31,10 @@ export default function BlogArticleContent({
   const [viewTracked, setViewTracked] = useState(false);
 
   const isPublic = version === 'public';
-  const title = isPublic ? publicTitle : proTitle;
   const content = isPublic ? publicContent : proContent;
   const excerpt = isPublic ? publicExcerpt : proExcerpt;
   const readTime = isPublic ? publicReadTime : proReadTime;
 
-  // Convert markdown to HTML (safe - our own converter, only produces allowed tags)
-  const html = markdownToHtml(content);
-
-  // Track view on mount and version change
   useEffect(() => {
     if (!viewTracked) {
       fetch('/api/blog/views', {
@@ -61,66 +51,67 @@ export default function BlogArticleContent({
     setViewTracked(false);
   };
 
+  const html = markdownToHtml(content);
+
   return (
     <div>
-      {/* Toggle */}
-      <div className="flex gap-2 mb-6 p-1 bg-gray-100 rounded-lg w-fit">
-        <button
-          onClick={() => handleVersionChange('public')}
-          className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
-            isPublic
-              ? 'bg-blue-600 text-white shadow-sm'
-              : 'text-gray-600 hover:text-gray-900'
-          }`}
-        >
-          Grand Public
-        </button>
-        <button
-          onClick={() => handleVersionChange('pro')}
-          className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
-            !isPublic
-              ? 'bg-green-600 text-white shadow-sm'
-              : 'text-gray-600 hover:text-gray-900'
-          }`}
-        >
-          Professionnels
-        </button>
+      {/* Toggle Version */}
+      <div className="flex items-center gap-3 mb-6">
+        <div className="flex bg-slate-100 rounded-xl p-1">
+          <button
+            onClick={() => handleVersionChange('public')}
+            className={`px-4 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+              isPublic
+                ? 'bg-blue-600 text-white shadow-md shadow-blue-200'
+                : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            Grand Public
+          </button>
+          <button
+            onClick={() => handleVersionChange('pro')}
+            className={`px-4 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+              !isPublic
+                ? 'bg-green-600 text-white shadow-md shadow-green-200'
+                : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            Professionnels
+          </button>
+        </div>
+        <div className="flex items-center gap-3 text-xs text-slate-400">
+          <span>{readTime} min</span>
+          <span>·</span>
+          <span>{isPublic ? viewCountPublic : viewCountPro} vues</span>
+        </div>
       </div>
 
-      {/* Info bar */}
-      <div className="flex items-center gap-4 mb-4 text-sm text-gray-500">
-        <span>{readTime} min de lecture</span>
-        <span>{isPublic ? viewCountPublic : viewCountPro} vues</span>
-        <span className={`px-2 py-0.5 rounded text-xs ${
-          isPublic ? 'bg-blue-50 text-blue-700' : 'bg-green-50 text-green-700'
-        }`}>
-          {isPublic ? 'Version simplifiée' : 'Version professionnelle'}
-        </span>
+      {/* Version Badge */}
+      <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold mb-6 ${
+        isPublic
+          ? 'bg-blue-50 text-blue-700 border border-blue-100'
+          : 'bg-green-50 text-green-700 border border-green-100'
+      }`}>
+        <div className={`w-2 h-2 rounded-full ${isPublic ? 'bg-blue-500' : 'bg-green-500'}`}></div>
+        {isPublic ? 'Version simplifiée · Accessible à tous' : 'Version détaillée · Professionnels de santé'}
       </div>
-
-      {/* Title */}
-      <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">
-        {title}
-      </h1>
 
       {/* Excerpt */}
-      <p className="text-lg text-gray-600 mb-6 leading-relaxed">
-        {excerpt}
-      </p>
+      <div className="bg-slate-50 border-l-4 border-blue-500 p-4 rounded-r-xl mb-8">
+        <p className="text-slate-600 leading-relaxed italic">
+          {excerpt}
+        </p>
+      </div>
 
-      {/* Content - HTML from our own markdown converter (safe, no user input) */}
+      {/* Article Content */}
       <div
-        className="prose prose-gray max-w-none prose-headings:text-gray-900 prose-a:text-blue-600 prose-strong:text-gray-900 prose-li:text-gray-700 prose-h2:mt-8 prose-h2:mb-4 prose-h3:mt-6 prose-h3:mb-3 prose-p:mb-4 prose-ul:mb-4 prose-ol:mb-4 prose-li:mb-1 prose-hr:my-8"
+        className="prose prose-slate max-w-none prose-headings:text-slate-900 prose-headings:font-bold prose-h2:text-xl prose-h2:mt-10 prose-h2:mb-4 prose-h2:pb-2 prose-h2:border-b prose-h2:border-slate-100 prose-h3:text-lg prose-h3:mt-8 prose-h3:mb-3 prose-p:text-slate-600 prose-p:leading-relaxed prose-p:mb-4 prose-a:text-blue-600 prose-a:no-underline hover:prose-a:underline prose-strong:text-slate-800 prose-ul:mb-4 prose-ol:mb-4 prose-li:text-slate-600 prose-li:mb-1 prose-hr:my-8 prose-hr:border-slate-200"
         dangerouslySetInnerHTML={{ __html: html }}
       />
     </div>
   );
 }
 
-/**
- * Markdown to HTML converter
- * Only produces safe tags: h1-h4, p, br, strong, em, a, ul, ol, li, hr
- */
 function markdownToHtml(md: string): string {
   const lines = md.split('\n');
   const htmlLines: string[] = [];
@@ -131,7 +122,6 @@ function markdownToHtml(md: string): string {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
 
-    // Horizontal rule
     if (/^---+$/.test(line.trim())) {
       if (inUl) { htmlLines.push('</ul>'); inUl = false; }
       if (inOl) { htmlLines.push('</ol>'); inOl = false; }
@@ -140,7 +130,6 @@ function markdownToHtml(md: string): string {
       continue;
     }
 
-    // Headers (check h4 before h3, h3 before h2, etc.)
     const h4 = line.match(/^#### (.+)$/);
     if (h4) {
       if (inUl) { htmlLines.push('</ul>'); inUl = false; }
@@ -174,7 +163,6 @@ function markdownToHtml(md: string): string {
       continue;
     }
 
-    // Unordered list items
     const ul = line.match(/^[-*] (.+)$/);
     if (ul) {
       if (inOl) { htmlLines.push('</ol>'); inOl = false; }
@@ -184,7 +172,6 @@ function markdownToHtml(md: string): string {
       continue;
     }
 
-    // Ordered list items
     const ol = line.match(/^\d+\. (.+)$/);
     if (ol) {
       if (inUl) { htmlLines.push('</ul>'); inUl = false; }
@@ -194,7 +181,6 @@ function markdownToHtml(md: string): string {
       continue;
     }
 
-    // Empty line
     if (line.trim() === '') {
       if (inUl) { htmlLines.push('</ul>'); inUl = false; }
       if (inOl) { htmlLines.push('</ol>'); inOl = false; }
@@ -202,7 +188,6 @@ function markdownToHtml(md: string): string {
       continue;
     }
 
-    // Regular text (paragraph)
     if (!inParagraph) {
       htmlLines.push('<p>');
       inParagraph = true;
