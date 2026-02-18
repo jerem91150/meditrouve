@@ -11,6 +11,35 @@ const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const GENERATION_MODEL = 'anthropic/claude-sonnet-4';
 
 /**
+ * Tente de reparer un JSON tronque ou malform
+ */
+function repairJson(str: string): string {
+  let s = str.trim();
+  let braces = 0;
+  let brackets = 0;
+  let inString = false;
+  let escaped = false;
+
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (escaped) { escaped = false; continue; }
+    if (ch === '') { escaped = true; continue; }
+    if (ch === '"') { inString = !inString; continue; }
+    if (inString) continue;
+    if (ch === '{') braces++;
+    else if (ch === '}') braces--;
+    else if (ch === '[') brackets++;
+    else if (ch === ']') brackets--;
+  }
+
+  if (inString) s += '"';
+  while (brackets > 0) { s += ']'; brackets--; }
+  while (braces > 0) { s += '}'; braces--; }
+
+  return s;
+}
+
+/**
  * Génère un slug unique à partir du topic et de la date
  */
 function generateSlug(topic: string, category: string): string {
@@ -358,7 +387,16 @@ export async function generateComprehensiveArticle(finding: ResearchFinding): Pr
       jsonStr = textContent.replace(/^```json?\n?/, '').replace(/\n?```$/, '').trim();
     }
 
-    const parsed = JSON.parse(jsonStr);
+    let parsed: any;
+    try {
+      parsed = JSON.parse(jsonStr);
+    } catch (parseErr) {
+      // Tenter de reparer le JSON tronque
+      console.log('  ⚠️ JSON malform, tentative de reparation...');
+      const repaired = repairJson(jsonStr);
+      parsed = JSON.parse(repaired);
+      console.log('  ✅ JSON repare avec succes');
+    }
 
     // S'assurer que keywords est un array
     if (parsed.keywords && typeof parsed.keywords === 'string') {

@@ -127,7 +127,17 @@ export async function runBDPMPipeline(
     for (const finding of selected) {
       try {
         console.log(`\n✍️ ═══ PHASE 3 : GÉNÉRATION "${finding.topic.substring(0, 50)}..." ═══`);
-        const article = await generateComprehensiveArticle(finding);
+        let article;
+        for (let attempt = 1; attempt <= 2; attempt++) {
+          try {
+            article = await generateComprehensiveArticle(finding);
+            break;
+          } catch (genErr) {
+            if (attempt === 2) throw genErr;
+            console.log(`  ⚠️ Tentative ${attempt} echouee, retry...`);
+          }
+        }
+        if (!article) throw new Error('Generation echouee apres 2 tentatives');
 
         console.log(`\n✅ ═══ PHASE 4 : VALIDATION "${article.slug}" ═══`);
         const qualityCheck = await validateArticle(article);
