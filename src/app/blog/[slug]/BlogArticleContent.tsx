@@ -18,7 +18,7 @@ interface Props {
 }
 
 /**
- * 🔄 Composant client pour le toggle Grand Public / Professionnels
+ * Composant client pour le toggle Grand Public / Professionnels
  */
 export default function BlogArticleContent({
   slug,
@@ -50,7 +50,7 @@ export default function BlogArticleContent({
 
   const handleVersionChange = (v: 'public' | 'pro') => {
     setVersion(v);
-    setViewTracked(false); // Track new version view
+    setViewTracked(false);
   };
 
   const isPublic = version === 'public';
@@ -71,7 +71,7 @@ export default function BlogArticleContent({
               : 'text-gray-600 hover:text-gray-900'
           }`}
         >
-          👥 Grand Public
+          Grand Public
         </button>
         <button
           onClick={() => handleVersionChange('pro')}
@@ -81,18 +81,18 @@ export default function BlogArticleContent({
               : 'text-gray-600 hover:text-gray-900'
           }`}
         >
-          🩺 Professionnels
+          Professionnels
         </button>
       </div>
 
       {/* Info bar */}
       <div className="flex items-center gap-4 mb-4 text-sm text-gray-500">
-        <span>⏱️ {readTime} min de lecture</span>
-        <span>👁️ {isPublic ? viewCountPublic : viewCountPro} vues</span>
+        <span>{readTime} min de lecture</span>
+        <span>{isPublic ? viewCountPublic : viewCountPro} vues</span>
         <span className={`px-2 py-0.5 rounded text-xs ${
           isPublic ? 'bg-blue-50 text-blue-700' : 'bg-green-50 text-green-700'
         }`}>
-          {isPublic ? 'Version simplifiée' : 'Version détaillée'}
+          {isPublic ? 'Version simplifiée' : 'Version professionnelle'}
         </span>
       </div>
 
@@ -106,15 +106,11 @@ export default function BlogArticleContent({
         {excerpt}
       </p>
 
-      {/* Content - rendered as simple markdown-like HTML */}
+      {/* Content */}
       <div
-        className="prose prose-gray max-w-none
-          prose-headings:text-gray-900
-          prose-a:text-blue-600
-          prose-strong:text-gray-900
-          prose-li:text-gray-700"
+        className="prose prose-gray max-w-none prose-headings:text-gray-900 prose-a:text-blue-600 prose-strong:text-gray-900 prose-li:text-gray-700 prose-h2:mt-8 prose-h2:mb-4 prose-h3:mt-6 prose-h3:mb-3 prose-p:mb-4 prose-ul:mb-4 prose-ol:mb-4 prose-li:mb-1 prose-hr:my-8"
         dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(markdownToHtml(content), {
-          ALLOWED_TAGS: ['h1', 'h2', 'h3', 'h4', 'p', 'br', 'strong', 'em', 'a', 'ul', 'li'],
+          ALLOWED_TAGS: ['h1', 'h2', 'h3', 'h4', 'p', 'br', 'strong', 'em', 'a', 'ul', 'ol', 'li', 'hr', 'blockquote', 'table', 'thead', 'tbody', 'tr', 'th', 'td'],
           ALLOWED_ATTR: ['href', 'target', 'rel', 'class'],
         }) }}
       />
@@ -123,30 +119,110 @@ export default function BlogArticleContent({
 }
 
 /**
- * Simple markdown to HTML converter (no external dependency needed)
+ * Markdown to HTML converter
  */
 function markdownToHtml(md: string): string {
-  let html = md
+  const lines = md.split('\n');
+  const htmlLines: string[] = [];
+  let inUl = false;
+  let inOl = false;
+  let inParagraph = false;
+
+  for (let i = 0; i < lines.length; i++) {
+    let line = lines[i];
+
+    // Horizontal rule
+    if (/^---+$/.test(line.trim())) {
+      if (inUl) { htmlLines.push('</ul>'); inUl = false; }
+      if (inOl) { htmlLines.push('</ol>'); inOl = false; }
+      if (inParagraph) { htmlLines.push('</p>'); inParagraph = false; }
+      htmlLines.push('<hr/>');
+      continue;
+    }
+
     // Headers
-    .replace(/^#### (.+)$/gm, '<h4>$1</h4>')
-    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
-    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
-    .replace(/^# (.+)$/gm, '<h1>$1</h1>')
-    // Bold & italic
+    const h4 = line.match(/^#### (.+)$/);
+    if (h4) {
+      if (inUl) { htmlLines.push('</ul>'); inUl = false; }
+      if (inOl) { htmlLines.push('</ol>'); inOl = false; }
+      if (inParagraph) { htmlLines.push('</p>'); inParagraph = false; }
+      htmlLines.push(`<h4>${inlineFormat(h4[1])}</h4>`);
+      continue;
+    }
+    const h3 = line.match(/^### (.+)$/);
+    if (h3) {
+      if (inUl) { htmlLines.push('</ul>'); inUl = false; }
+      if (inOl) { htmlLines.push('</ol>'); inOl = false; }
+      if (inParagraph) { htmlLines.push('</p>'); inParagraph = false; }
+      htmlLines.push(`<h3>${inlineFormat(h3[1])}</h3>`);
+      continue;
+    }
+    const h2 = line.match(/^## (.+)$/);
+    if (h2) {
+      if (inUl) { htmlLines.push('</ul>'); inUl = false; }
+      if (inOl) { htmlLines.push('</ol>'); inOl = false; }
+      if (inParagraph) { htmlLines.push('</p>'); inParagraph = false; }
+      htmlLines.push(`<h2>${inlineFormat(h2[1])}</h2>`);
+      continue;
+    }
+    const h1 = line.match(/^# (.+)$/);
+    if (h1) {
+      if (inUl) { htmlLines.push('</ul>'); inUl = false; }
+      if (inOl) { htmlLines.push('</ol>'); inOl = false; }
+      if (inParagraph) { htmlLines.push('</p>'); inParagraph = false; }
+      htmlLines.push(`<h1>${inlineFormat(h1[1])}</h1>`);
+      continue;
+    }
+
+    // Unordered list items
+    const ul = line.match(/^[-*] (.+)$/);
+    if (ul) {
+      if (inOl) { htmlLines.push('</ol>'); inOl = false; }
+      if (inParagraph) { htmlLines.push('</p>'); inParagraph = false; }
+      if (!inUl) { htmlLines.push('<ul>'); inUl = true; }
+      htmlLines.push(`<li>${inlineFormat(ul[1])}</li>`);
+      continue;
+    }
+
+    // Ordered list items
+    const ol = line.match(/^\d+\. (.+)$/);
+    if (ol) {
+      if (inUl) { htmlLines.push('</ul>'); inUl = false; }
+      if (inParagraph) { htmlLines.push('</p>'); inParagraph = false; }
+      if (!inOl) { htmlLines.push('<ol>'); inOl = true; }
+      htmlLines.push(`<li>${inlineFormat(ol[1])}</li>`);
+      continue;
+    }
+
+    // Empty line
+    if (line.trim() === '') {
+      if (inUl) { htmlLines.push('</ul>'); inUl = false; }
+      if (inOl) { htmlLines.push('</ol>'); inOl = false; }
+      if (inParagraph) { htmlLines.push('</p>'); inParagraph = false; }
+      continue;
+    }
+
+    // Regular text (paragraph)
+    if (!inParagraph) {
+      htmlLines.push('<p>');
+      inParagraph = true;
+      htmlLines.push(inlineFormat(line));
+    } else {
+      htmlLines.push('<br/>' + inlineFormat(line));
+    }
+  }
+
+  if (inUl) htmlLines.push('</ul>');
+  if (inOl) htmlLines.push('</ol>');
+  if (inParagraph) htmlLines.push('</p>');
+
+  return htmlLines.join('\n');
+}
+
+function inlineFormat(text: string): string {
+  return text
     .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    // Links
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
-    // Unordered lists
-    .replace(/^- (.+)$/gm, '<li>$1</li>')
-    // Paragraphs (double newlines)
-    .replace(/\n\n/g, '</p><p>')
-    // Single newlines within paragraphs
-    .replace(/\n/g, '<br/>');
-
-  // Wrap list items in ul
-  html = html.replace(/((?:<li>.*?<\/li>\s*)+)/g, '<ul>$1</ul>');
-
-  return `<p>${html}</p>`;
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
 }

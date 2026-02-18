@@ -21,6 +21,7 @@
     "@radix-ui/react-select": "2.2.6",
     "@radix-ui/react-tabs": "1.1.13",
     "@stripe/stripe-js": "^8.6.1",
+    "@tailwindcss/typography": "^0.5.19",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/nodemailer": "^7.0.5",
     "@types/qrcode": "^1.5.6",
