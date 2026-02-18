@@ -32,6 +32,18 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
+const CATEGORY_STYLES: Record<string, { bg: string; text: string; label: string }> = {
+  'rupture-stock': { bg: 'bg-red-100', text: 'text-red-700', label: 'Rupture de stock' },
+  'alerte-sanitaire': { bg: 'bg-orange-100', text: 'text-orange-700', label: 'Alerte sanitaire' },
+  'nouveau-medicament': { bg: 'bg-emerald-100', text: 'text-emerald-700', label: 'Nouveau medicament' },
+  'reglementation': { bg: 'bg-purple-100', text: 'text-purple-700', label: 'Reglementation' },
+  'prevention': { bg: 'bg-teal-100', text: 'text-teal-700', label: 'Prevention' },
+  'pharmacovigilance': { bg: 'bg-indigo-100', text: 'text-indigo-700', label: 'Pharmacovigilance' },
+  'etude-scientifique': { bg: 'bg-cyan-100', text: 'text-cyan-700', label: 'Etude scientifique' },
+  'avancee-medicale': { bg: 'bg-green-100', text: 'text-green-700', label: 'Avancee medicale' },
+  'actualite-sante': { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Actualite sante' },
+};
+
 export default async function BlogPostPage({ params }: Props) {
   const { slug } = await params;
   const post = await prisma.blogPost.findUnique({
@@ -41,6 +53,7 @@ export default async function BlogPostPage({ params }: Props) {
   if (!post) notFound();
 
   const sources = (post.sources as Array<{ url: string; title: string; publisher: string; date: string }>) || [];
+  const catStyle = CATEGORY_STYLES[post.category] || { bg: 'bg-blue-100', text: 'text-blue-700', label: post.category };
   const isRupture = post.category?.includes('rupture');
   const publishDate = new Date(post.publishedAt).toLocaleDateString('fr-FR', {
     day: 'numeric',
@@ -74,20 +87,9 @@ export default async function BlogPostPage({ params }: Props) {
               <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-3">
-                    {isRupture ? (
-                      <span className="inline-block px-3 py-1 bg-red-100 text-red-700 text-xs font-bold rounded-full uppercase tracking-wider">
-                        Rupture de stock
-                      </span>
-                    ) : (
-                      <span className="inline-block px-3 py-1 bg-blue-100 text-blue-700 text-xs font-bold rounded-full uppercase tracking-wider">
-                        {post.category}
-                      </span>
-                    )}
-                    {post.validationScore && (
-                      <span className="inline-block px-3 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full">
-                        Qualité {post.validationScore}/100
-                      </span>
-                    )}
+                    <span className={`inline-block px-3 py-1 ${catStyle.bg} ${catStyle.text} text-xs font-bold rounded-full uppercase tracking-wider`}>
+                      {catStyle.label}
+                    </span>
                   </div>
                   <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 mb-2 leading-tight">
                     {post.title}
@@ -122,7 +124,7 @@ export default async function BlogPostPage({ params }: Props) {
                 </div>
                 <div>
                   <p className="text-xs text-slate-400 uppercase font-semibold">Sources</p>
-                  <p className="font-medium text-blue-600">{sources.length} référence{sources.length > 1 ? 's' : ''}</p>
+                  <p className="font-medium text-blue-600">{sources.length} reference{sources.length > 1 ? 's' : ''}</p>
                 </div>
               </div>
             </section>
@@ -151,7 +153,7 @@ export default async function BlogPostPage({ params }: Props) {
                   <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                   </svg>
-                  Sources et références
+                  Sources et references
                 </h2>
                 <ul className="space-y-3">
                   {sources.map((source, i) => (
@@ -184,8 +186,8 @@ export default async function BlogPostPage({ params }: Props) {
 
             {/* Widget Alerte */}
             <div className="bg-gradient-to-br from-blue-600 to-blue-800 rounded-3xl p-6 text-white shadow-xl shadow-blue-200/50">
-              <h3 className="text-lg font-bold mb-2">Restez informé</h3>
-              <p className="text-blue-100 text-sm mb-5">Recevez une notification dès qu&apos;une mise à jour est publiée sur ce médicament.</p>
+              <h3 className="text-lg font-bold mb-2">Restez informe</h3>
+              <p className="text-blue-100 text-sm mb-5">Recevez une notification des qu&apos;une mise a jour est publiee sur ce medicament.</p>
               <Link
                 href="/"
                 className="block w-full bg-white text-blue-700 font-bold py-3 rounded-xl hover:bg-blue-50 transition shadow-lg text-center text-sm"
@@ -201,11 +203,11 @@ export default async function BlogPostPage({ params }: Props) {
               <ul className="space-y-4">
                 <li className="flex gap-3">
                   <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0 text-xs font-bold">1</div>
-                  <p className="text-sm text-slate-600">Contactez votre <strong>médecin traitant</strong> ou spécialiste pour évaluer les alternatives.</p>
+                  <p className="text-sm text-slate-600">Contactez votre <strong>medecin traitant</strong> ou specialiste pour evaluer les alternatives.</p>
                 </li>
                 <li className="flex gap-3">
                   <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0 text-xs font-bold">2</div>
-                  <p className="text-sm text-slate-600">Ne modifiez <strong>jamais</strong> votre posologie sans avis médical.</p>
+                  <p className="text-sm text-slate-600">Ne modifiez <strong>jamais</strong> votre posologie sans avis medical.</p>
                 </li>
                 <li className="flex gap-3">
                   <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0 text-xs font-bold">3</div>
@@ -213,7 +215,7 @@ export default async function BlogPostPage({ params }: Props) {
                 </li>
                 <li className="flex gap-3">
                   <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0 text-xs font-bold">4</div>
-                  <p className="text-sm text-slate-600">Rapprochez-vous de votre <strong>pharmacien</strong> pour vérifier les disponibilités locales.</p>
+                  <p className="text-sm text-slate-600">Rapprochez-vous de votre <strong>pharmacien</strong> pour verifier les disponibilites locales.</p>
                 </li>
               </ul>
             </div>
@@ -221,7 +223,7 @@ export default async function BlogPostPage({ params }: Props) {
             {/* Tags / Mots-clés */}
             {post.keywords.length > 0 && (
               <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm">
-                <h3 className="text-lg font-bold text-slate-900 mb-4">Mots-clés</h3>
+                <h3 className="text-lg font-bold text-slate-900 mb-4">Mots-cles</h3>
                 <div className="flex flex-wrap gap-2">
                   {post.keywords.map((kw, i) => (
                     <span key={i} className="px-3 py-1 bg-slate-100 text-slate-600 text-xs rounded-full font-medium">
@@ -241,7 +243,7 @@ export default async function BlogPostPage({ params }: Props) {
                 <div>
                   <p className="font-semibold text-amber-800 text-sm mb-1">Avertissement</p>
                   <p className="text-xs text-amber-700 leading-relaxed">
-                    Cet article est fourni à titre informatif et ne remplace en aucun cas un avis médical professionnel. Consultez toujours votre médecin ou pharmacien.
+                    Cet article est fourni a titre informatif et ne remplace en aucun cas un avis medical professionnel. Consultez toujours votre medecin ou pharmacien.
                   </p>
                 </div>
               </div>
