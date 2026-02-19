@@ -8,7 +8,7 @@ import { ResearchFinding, GeneratedArticle, GeneratedArticleSchema } from './typ
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
-const GENERATION_MODEL = 'anthropic/claude-3.5-haiku';
+const GENERATION_MODEL = 'anthropic/claude-3.5-sonnet';
 
 /**
  * Tente de reparer un JSON tronque ou malform
@@ -350,6 +350,7 @@ export async function generateComprehensiveArticle(finding: ResearchFinding): Pr
       ? JSON.stringify({
           model: GENERATION_MODEL,
           max_tokens: 10000,
+          response_format: { type: 'json_object' },
           messages: [
             { role: 'system', content: system },
             { role: 'user', content: user },
