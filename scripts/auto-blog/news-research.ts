@@ -75,8 +75,8 @@ JSON UNIQUEMENT.`;
       : 'https://api.anthropic.com/v1/messages';
 
     const model = useOpenRouter
-      ? 'anthropic/claude-3.5-haiku-20241022'
-      : 'claude-3-5-haiku-20241022';
+      ? 'anthropic/claude-3-haiku-20240307'
+      : 'claude-3-haiku-20240307';
 
     const headers: Record<string, string> = useOpenRouter
       ? { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` }
