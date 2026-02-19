@@ -8,7 +8,7 @@ import { ResearchFinding, GeneratedArticle, GeneratedArticleSchema } from './typ
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
-const GENERATION_MODEL = 'anthropic/claude-sonnet-4';
+const GENERATION_MODEL = 'anthropic/claude-3.5-haiku-20241022';
 
 /**
  * Tente de reparer un JSON tronque ou malform
